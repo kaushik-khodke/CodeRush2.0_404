@@ -26,7 +26,7 @@ export function TopBar({ status, met, anomalyCount, criticalCount, anomalyScore 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-6 border-b border-border bg-surface px-4">
       <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center overflow-hidden rounded-md border border-primary/30 bg-surface-raised/50 p-1">
+        <div className="flex size-13 items-center justify-center overflow-hidden rounded-md border border-primary/30 bg-surface-raised/50 p-1">
           <img src="/favicon-removebg-preview.png" alt="SMOA Logo" className="size-full object-contain" />
         </div>
         <div className="leading-tight">
