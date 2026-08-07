@@ -89,11 +89,13 @@ function ChartCard({
   series,
   frames,
   status,
+  badge,
 }: {
   title: string;
   series: Series[];
   frames: TelemetryFrame[];
   status: LinkStatus;
+  badge?: string;
 }) {
   // Rolling 60 s window, x-axis pinned to -60..0 so the trace slides instead of
   // rescaling (no jitter). Downsampled to <=120 points per series.
@@ -122,9 +124,17 @@ function ChartCard({
   return (
     <section className="panel flex flex-col">
       <div className="panel-header">
-        <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">{title}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">{title}</h3>
+          {badge && (
+            <span className="rounded-sm border border-primary/50 bg-primary/10 px-1.5 py-px font-tech text-[0.6rem] font-semibold text-primary uppercase">
+              {badge}
+            </span>
+          )}
+        </div>
         <span className="label-tech">60 s · 1 Hz</span>
       </div>
+
 
       <div className="grid grid-cols-3 gap-px border-b border-border bg-border">
         {series.map((s) => {
@@ -183,9 +193,10 @@ export function TelemetryPanel({ frames, status }: { frames: TelemetryFrame[]; s
 
   return (
     <div className={cn("flex min-h-0 flex-col gap-2 overflow-y-auto scroll-thin pr-0.5")}>
-      <ChartCard title="Electrical Power" series={power} frames={frames} status={status} />
-      <ChartCard title="Thermal Control" series={thermal} frames={frames} status={status} />
+      <ChartCard title="Electrical Power" series={power} frames={frames} status={status} badge="ML Life Regressor" />
+      <ChartCard title="Thermal Control" series={thermal} frames={frames} status={status} badge="ML Temp Regressor" />
       <ChartCard title="ADCS" series={adcs} frames={frames} status={status} />
     </div>
   );
+
 }

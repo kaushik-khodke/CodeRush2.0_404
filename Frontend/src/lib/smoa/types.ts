@@ -52,6 +52,8 @@ export interface TelemetryFrame {
   /** Orbital true anomaly, degrees — drives the orbit position indicator */
   orbitAngle: number;
   eclipse: boolean;
+  /** Live ML Sentinel anomaly score 0-1 */
+  anomalyScore?: number;
 }
 
 export type LinkStatus = "connecting" | "live" | "degraded" | "disconnected";
@@ -68,7 +70,15 @@ export interface Diagnosis {
   proposedAction: string;
   model: string;
   latencyMs: number;
+  /** Predictive regression targets from ML model */
+  predictiveMetrics?: {
+    remainingBatteryLife?: string;
+    estCpuTemp30min?: string;
+  };
+  /** Active safety constraint bounds violations */
+  constraintViolations?: string[];
 }
+
 
 export interface AnomalyEvent {
   id: string;
