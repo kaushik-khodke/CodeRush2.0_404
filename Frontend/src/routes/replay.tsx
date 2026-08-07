@@ -9,9 +9,9 @@ import { TopBar } from "@/components/smoa/TopBar";
 import { mockIncident } from "@/lib/smoa/mock";
 import { cn } from "@/lib/utils";
 
-const title = "Digital Twin Replay — SMOA Mission Control";
+const title = "ORION AI — Digital Twin Replay";
 const description =
-  "Scrub a historical Helios-3 incident with telemetry playback synced to the original anomaly flag, diagnosis, and operator decision.";
+  "Scrub a historical incident with telemetry playback synced to the original anomaly flag, diagnosis, and operator decision.";
 
 export const Route = createFileRoute("/replay")({
   head: () => ({

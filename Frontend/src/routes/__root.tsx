@@ -77,13 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SMOA — Space Mission Operations Automator" },
+      { title: "ORION AI — Mission Operations Copilot" },
       {
         name: "description",
         content:
           "Mission control console for spacecraft telemetry, AI anomaly diagnoses, and human-authorized flight commanding.",
       },
-      { name: "author", content: "SMOA Flight Operations" },
+      { name: "author", content: "ORION AI Flight Operations" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

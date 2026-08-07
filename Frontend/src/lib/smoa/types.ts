@@ -139,3 +139,14 @@ export interface FaultInjection {
   subsystem: Subsystem;
   magnitude: number;
 }
+
+export interface Agent {
+  id: string;
+  name: string;
+  role: string;
+  status: "active" | "standby" | "watching";
+  confidence: number;
+  lastAction: string;
+  pipelineOrder: number;
+  outputType: string;
+}

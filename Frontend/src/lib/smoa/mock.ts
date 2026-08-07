@@ -271,3 +271,98 @@ export function mockIncident(): ReplayIncident {
     },
   };
 }
+
+export function mockAgents(): Agent[] {
+  return [
+    {
+      id: "mission_planner",
+      name: "Mission Planner Agent",
+      role: "Schedule Optimization",
+      status: "active",
+      confidence: 0.95,
+      lastAction: "Optimized science window schedules for Lunar transit",
+      pipelineOrder: 1,
+      outputType: "plan"
+    },
+    {
+      id: "telemetry_monitor",
+      name: "Telemetry Monitoring Agent",
+      role: "Live Data Ingestion",
+      status: "active",
+      confidence: 0.99,
+      lastAction: "Ingesting EPS-2 bus voltage frames at 1 Hz",
+      pipelineOrder: 2,
+      outputType: "telemetry"
+    },
+    {
+      id: "ml_sentinel",
+      name: "Machine Learning Sentinel",
+      role: "Anomaly Detection (Isolation Forest)",
+      status: "active",
+      confidence: 0.94,
+      lastAction: "Flagged anomaly EVT-4471 with isolation score 0.92",
+      pipelineOrder: 3,
+      outputType: "anomaly_score"
+    },
+    {
+      id: "diagnosis_agent",
+      name: "Diagnosis Agent",
+      role: "Root Cause & Confidence",
+      status: "active",
+      confidence: 0.91,
+      lastAction: "Pinpointed imbalance in EPS-2 balancing FET",
+      pipelineOrder: 4,
+      outputType: "diagnosis"
+    },
+    {
+      id: "mission_continuation",
+      name: "Mission Continuation Agent",
+      role: "Degraded-Mode Replanning",
+      status: "active",
+      confidence: 0.89,
+      lastAction: "Evaluated power recovery vs safety margins",
+      pipelineOrder: 5,
+      outputType: "continuation"
+    },
+    {
+      id: "multimodal_context",
+      name: "Multimodal Context Agent",
+      role: "Sensor & Operator Cross-Check",
+      status: "active",
+      confidence: 0.87,
+      lastAction: "Cross-checked operator thermal reports against EPS sensors",
+      pipelineOrder: 6,
+      outputType: "context"
+    },
+    {
+      id: "rag_recovery",
+      name: "RAG Recovery Agent",
+      role: "SOP & Runbook Retrieval",
+      status: "active",
+      confidence: 0.93,
+      lastAction: "Retrieved SOP-EPS-014 and 3 similar historic failures",
+      pipelineOrder: 7,
+      outputType: "recovery"
+    },
+    {
+      id: "future_simulation",
+      name: "Future Simulation Agent",
+      role: "What-If Outcome Modeling",
+      status: "active",
+      confidence: 0.92,
+      lastAction: "Ran 2 what-if battery models for the continuation plan",
+      pipelineOrder: 8,
+      outputType: "simulation"
+    },
+    {
+      id: "flight_director",
+      name: "Flight Director Agent",
+      role: "Recommendation Synthesis",
+      status: "active",
+      confidence: 0.96,
+      lastAction: "Synthesized safe-mode recommendations and uplink procedures",
+      pipelineOrder: 9,
+      outputType: "director_summary"
+    }
+  ];
+}
