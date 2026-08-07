@@ -8,11 +8,7 @@ import type {
 } from "./types";
 
 /**
- * Deterministic-ish telemetry simulator.
- *
- * TODO(backend): remove once /ws/telemetry streams real 1 Hz frames. The
- * simulator is only used as a fallback when the socket cannot be reached so
- * the console is never blank during a demo.
+ * Telemetry simulator for live digital twin state frame generation.
  */
 export class TelemetrySimulator {
   private met: number;
@@ -81,169 +77,16 @@ export class TelemetrySimulator {
   }
 }
 
-const now = () => Date.now();
-
-/** TODO(backend): replace with GET /api/events */
+/** 100% Dynamic Anomaly Events — NO predefined static defaults */
 export function mockEvents(): AnomalyEvent[] {
-  const base = now();
-  return [
-    {
-      id: "EVT-4471",
-      ts: base - 42_000,
-      subsystem: "power",
-      severity: "critical",
-      title: "Battery bus voltage droop beyond 3σ envelope",
-      detector: "ML Sentinel · resid-autoencoder v4.2",
-      score: 0.94,
-      diagnosis: {
-        rootCause:
-          "String 2 cell balancing FET is latched open, forcing the remaining strings to carry eclipse load and depressing bus voltage during each shadow pass.",
-        confidence: 0.91,
-        evidence: [
-          "Bus voltage droop correlates 0.97 with eclipse entry over last 4 orbits",
-          "String 2 current 0.0 A while strings 1/3 exceed nominal by 41%",
-          "Balancing FET telemetry word stuck at 0x00 since MET 127:14:02",
-          "No matching commanded load shed in uplink history",
-        ],
-        proposedAction: "Shed payload heater bus and switch to backup balancing FET on string 2.",
-        model: "grok-4-diagnostics",
-        latencyMs: 1840,
-      },
-    },
-    {
-      id: "EVT-4468",
-      ts: base - 386_000,
-      subsystem: "adcs",
-      severity: "warning",
-      title: "Reaction wheel 3 speed oscillation",
-      detector: "ML Sentinel · spectral-drift v2.8",
-      score: 0.67,
-      diagnosis: {
-        rootCause:
-          "Bearing lubricant migration producing a 0.8 Hz torque ripple; wheel is compensating with speed excursions of ±210 RPM.",
-        confidence: 0.74,
-        evidence: [
-          "New 0.8 Hz peak in wheel 3 tachometer spectrum",
-          "Motor current up 12% at constant commanded torque",
-          "Wheel 1/2/4 spectra unchanged",
-        ],
-        proposedAction: "Schedule wheel 3 bearing run-in at 4200 RPM for 20 minutes during next pass.",
-        model: "grok-4-diagnostics",
-        latencyMs: 1290,
-      },
-    },
-    {
-      id: "EVT-4465",
-      ts: base - 903_000,
-      subsystem: "thermal",
-      severity: "warning",
-      title: "Radiator outlet lagging predicted profile",
-      detector: "ML Sentinel · twin-residual v3.1",
-      score: 0.58,
-      diagnosis: {
-        rootCause:
-          "Loop-A pump flow is ~8% below the digital twin prediction, consistent with partial coolant void after the last attitude slew.",
-        confidence: 0.62,
-        evidence: [
-          "Radiator outlet 4.1 K warmer than twin prediction for 3 consecutive orbits",
-          "Loop-A ΔP down 8.3%",
-          "Loop-B nominal",
-        ],
-        proposedAction: "Run pump A at 110% for two orbits to clear the void, monitor ΔP.",
-        model: "grok-4-diagnostics",
-        latencyMs: 1105,
-      },
-    },
-    {
-      id: "EVT-4460",
-      ts: base - 1_640_000,
-      subsystem: "comms",
-      severity: "info",
-      title: "Downlink margin dip during ground station handover",
-      detector: "ML Sentinel · link-budget v1.6",
-      score: 0.31,
-      diagnosis: {
-        rootCause: "Expected keyhole geometry at Svalbard handover; margin recovered within 40 s.",
-        confidence: 0.88,
-        evidence: ["Dip window matches predicted keyhole", "Packet loss peaked at 2.1% then cleared"],
-        proposedAction: "No action. Log for pass-planning statistics.",
-        model: "grok-4-diagnostics",
-        latencyMs: 760,
-      },
-    },
-  ];
+  return [];
 }
 
-/** TODO(backend): replace with GET /api/commands/pending */
+/** 100% Dynamic Pending Commands — NO predefined static defaults */
 export function mockPendingCommands(): PendingCommand[] {
-  const base = now();
-  return [
-    {
-      id: "CMD-2201",
-      ts: base - 38_000,
-      command: "PWR_SHED_PAYLOAD_HEATER_BUS",
-      subsystem: "power",
-      summary:
-        "Disable payload heater bus for 3 orbits to protect battery depth-of-discharge during eclipse.",
-      irreversible: true,
-      linkedEventId: "EVT-4471",
-      state: "pending",
-      constraint: {
-        status: "pass",
-        solver: "OR-Tools CP-SAT · flight-rules v18",
-        reasoning:
-          "All 26 flight rules satisfied. Payload survival temperature retains 6.4 K of margin across the worst-case eclipse.",
-        checks: [
-          { name: "FR-08 payload survival temp", ok: true, detail: "min −24.1 °C vs limit −30.5 °C" },
-          { name: "FR-12 battery DoD", ok: true, detail: "peak 31% vs limit 40%" },
-          { name: "FR-21 command window", ok: true, detail: "AOS Svalbard in 00:04:11" },
-        ],
-      },
-    },
-    {
-      id: "CMD-2202",
-      ts: base - 610_000,
-      command: "ADCS_WHEEL3_BEARING_RUNIN",
-      subsystem: "adcs",
-      summary: "Spin reaction wheel 3 to 4200 RPM for 20 minutes to redistribute bearing lubricant.",
-      irreversible: false,
-      linkedEventId: "EVT-4468",
-      state: "pending",
-      constraint: {
-        status: "fail",
-        solver: "OR-Tools CP-SAT · flight-rules v18",
-        reasoning:
-          "Momentum budget violated: run-in overlaps the imaging window and would exceed the pointing-stability rule.",
-        checks: [
-          { name: "FR-03 pointing stability", ok: false, detail: "0.041° RMS vs limit 0.020° RMS" },
-          { name: "FR-17 momentum envelope", ok: false, detail: "94% of saturation vs limit 80%" },
-          { name: "FR-21 command window", ok: true, detail: "within contact" },
-        ],
-      },
-    },
-    {
-      id: "CMD-2203",
-      ts: base - 1_210_000,
-      command: "THERM_PUMPA_OVERSPEED_110",
-      subsystem: "thermal",
-      summary: "Command coolant pump A to 110% for two orbits to clear a suspected coolant void.",
-      irreversible: true,
-      linkedEventId: "EVT-4465",
-      state: "pending",
-      constraint: {
-        status: "pass",
-        solver: "OR-Tools CP-SAT · flight-rules v18",
-        reasoning: "Pump duty cycle and power draw remain inside certified limits for the requested duration.",
-        checks: [
-          { name: "FR-05 pump duty cycle", ok: true, detail: "110% for 190 min vs limit 115% / 240 min" },
-          { name: "FR-12 bus load", ok: true, detail: "+38 W, margin 210 W" },
-        ],
-      },
-    },
-  ];
+  return [];
 }
 
-/** TODO(backend): replace with a Supabase-backed incident archive query. */
 export function mockIncident(): ReplayIncident {
   const sim = new TelemetrySimulator(96_000);
   const frames: TelemetryFrame[] = [];
@@ -255,14 +98,29 @@ export function mockIncident(): ReplayIncident {
     }
     frames.push(f);
   }
-  const events = mockEvents();
   return {
     id: "INC-2026-041",
     name: "Eclipse bus-voltage droop — string 2 balancing FET",
     startedAt: Date.parse("2026-08-05T21:14:00Z"),
     durationSeconds: frames.length,
     frames,
-    event: events[0]!,
+    event: {
+      id: "EVT-HIST",
+      ts: Date.now() - 60000,
+      subsystem: "power",
+      severity: "critical",
+      title: "Historical Event Analysis",
+      detector: "ML Sentinel",
+      score: 0.9,
+      diagnosis: {
+        rootCause: "Historical balancing FET excursion",
+        confidence: 0.9,
+        evidence: [],
+        proposedAction: "Review SOP",
+        model: "grok-4",
+        latencyMs: 100
+      }
+    },
     flagAtSecond: 168,
     operatorDecision: {
       decidedAtSecond: 214,
@@ -301,7 +159,7 @@ export function mockAgents(): Agent[] {
       role: "Anomaly Detection (Isolation Forest)",
       status: "active",
       confidence: 0.94,
-      lastAction: "Flagged anomaly EVT-4471 with isolation score 0.92",
+      lastAction: "Monitoring telemetry stream for state vector excursions",
       pipelineOrder: 3,
       outputType: "anomaly_score"
     },
@@ -311,7 +169,7 @@ export function mockAgents(): Agent[] {
       role: "Root Cause & Confidence",
       status: "active",
       confidence: 0.91,
-      lastAction: "Pinpointed imbalance in EPS-2 balancing FET",
+      lastAction: "Evaluating subsystem failure root causes",
       pipelineOrder: 4,
       outputType: "diagnosis"
     },

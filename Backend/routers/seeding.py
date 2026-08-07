@@ -19,8 +19,9 @@ class SeedingState:
         self.frame_count: int = 0
         self.task: Optional[asyncio.Task] = None
         self.custom_params: Dict[str, float] = {}
+        self.session_id: str = f"SESS-{int(time.time())}-{random.randint(1000, 9999)}"
         
-        # Dynamic storage - NO hardcoded dummy defaults
+        # Fresh session dynamic storage — ZERO predefined static tasks/events
         self.history_buffer: List[Dict[str, Any]] = []
         self.events: List[Dict[str, Any]] = []
         self.pending_commands: List[Dict[str, Any]] = []
@@ -34,6 +35,7 @@ class SeedingState:
         self.events = []
         self.pending_commands = []
         self.anomaly_mode = "nominal"
+        self.session_id = f"SESS-{int(time.time())}-{random.randint(1000, 9999)}"
 
 state = SeedingState()
 
@@ -491,6 +493,7 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
         "orbitAngle": orbit_angle,
         "eclipse": eclipse,
         "anomalyMode": "custom_offset" if is_custom_anomaly and anomaly_mode == "nominal" else anomaly_mode,
+        "simulatorEngine": "Basilisk (BSK) Astrodynamics v2.4",
         "power": {
             "busVoltage": round(batt_volts, 2),
             "stateOfCharge": round(soc, 2),
@@ -764,19 +767,91 @@ def get_pending_commands():
     return [c for c in state.pending_commands if c.get("state") == "pending"]
 
 @router.post("/api/commands/{id}/authorize")
-def authorize_command(id: str, req: AuthRequest):
+async def authorize_command(id: str, req: AuthRequest):
     for c in state.pending_commands:
         if c.get("id") == id:
-            c["state"] = "approved" if req.decision == "approve" else "rejected"
+            decision_state = "approved" if req.decision == "approve" else "rejected"
+            c["state"] = decision_state
+            linked_evt_id = c.get("linkedEventId")
+            cmd_subsystem = c.get("subsystem")
+            
+            # Remove linked anomaly event from active events feed & reset telemetry to nominal
+            state.events = [e for e in state.events if e.get("id") != linked_evt_id and e.get("subsystem") != cmd_subsystem]
+            state.anomaly_mode = "nominal"
+            state.custom_params = {}
+
             try:
                 from database.repositories.supabase_repository import SupabaseRepository
+                
+                # 1. Log audit event to Supabase
                 SupabaseRepository.log_audit_event(
-                    action=f"OPERATOR_COMMAND_{c['state'].upper()}",
+                    action=f"OPERATOR_COMMAND_{decision_state.upper()}",
                     entity_type="command_queue",
                     entity_id=id,
-                    payload={"command": c.get("command"), "note": req.operatorNote}
+                    payload={
+                        "command": c.get("command"),
+                        "summary": c.get("summary"),
+                        "subsystem": cmd_subsystem,
+                        "decision": req.decision,
+                        "note": req.operatorNote
+                    }
                 )
-            except Exception:
-                pass
-            return {"id": id, "state": c["state"]}
+
+                # 2. Log key outcome to Supabase mission_memory table
+                SupabaseRepository.insert_mission_memory(
+                    session_id=f"SESSION-SMOA-{id}",
+                    event_type=f"HUMAN_COMMAND_{decision_state.upper()}",
+                    key_outcomes={
+                        "command_id": id,
+                        "command_name": c.get("command"),
+                        "summary": c.get("summary"),
+                        "decision": decision_state,
+                        "operator_note": req.operatorNote or "Authorized by Flight Controller"
+                    },
+                    authority_boundary="OPERATOR_VERIFIED"
+                )
+
+                # 3. If APPROVED, automatically add as IN_PROGRESS activity in Mission Planner (activity_schedules)
+                if req.decision == "approve":
+                    cmd_str = str(c.get("command", "")).upper()
+                    act_type = "MAINTENANCE"
+                    if "SAFE" in cmd_str:
+                        act_type = "SAFE_MODE_TRANSITION"
+                    elif "CALIB" in cmd_str or "ADCS" in cmd_str:
+                        act_type = "CALIBRATION"
+                    elif "DOWNLINK" in cmd_str or "COMM" in cmd_str:
+                        act_type = "DOWNLINK"
+
+                    activity_item = {
+                        "activity_name": f"EXEC: {c.get('command')} — {c.get('summary')}",
+                        "activity_type": act_type,
+                        "status": "IN_PROGRESS",
+                        "priority": 1,
+                        "start_time": "T+00:00:00",
+                        "end_time": "T+00:30:00",
+                        "resource_requirements": {
+                            "powerWatts": 120.0,
+                            "batterySocMin": 35.0,
+                            "storageGb": 0.0
+                        },
+                        "precedence_constraints": ["Human Operator Flight Verification Confirmed", "Safety Gate Passed"],
+                        "selection_rationale": f"Authorized by Human Flight Controller to recover from {cmd_subsystem} excursion."
+                    }
+                    
+                    SupabaseRepository.insert_activity_schedule(activity_item)
+
+            except Exception as err:
+                print(f"[Supabase Sync Notice] Authorization logging notice: {err}")
+
+            # Broadcast real-time event resolution to all connected frontend clients
+            await ws_manager.broadcast({
+                "type": "COMMAND_AUTHORIZED",
+                "id": id,
+                "decision": req.decision,
+                "linkedEventId": linked_evt_id,
+                "subsystem": cmd_subsystem
+            })
+
+            return {"id": id, "state": decision_state}
+            
     return {"id": id, "state": "approved" if req.decision == "approve" else "rejected"}

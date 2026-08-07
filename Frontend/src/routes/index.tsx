@@ -77,13 +77,28 @@ function OperationsConsole() {
     return () => clearInterval(interval);
   }, [loadEvents, loadCommands]);
 
-  const onDecide = useCallback((id: string, decision: "approve" | "reject") => {
-    setBusyId(id);
-    authorizeCommand(id, decision)
-      .then((res) => setCommands((prev) => prev.map((c) => (c.id === id ? { ...c, state: res.state } : c))))
-      .catch(() => setCommandsError(`Authorization for ${id} failed to transmit. Command left pending.`))
-      .finally(() => setBusyId(null));
-  }, []);
+  const onDecide = useCallback(
+    (id: string, decision: "approve" | "reject") => {
+      setBusyId(id);
+      const targetCmd = commands.find((c) => c.id === id);
+      authorizeCommand(id, decision)
+        .then((res) => {
+          // Remove command from pending queue state
+          setCommands((prev) => prev.filter((c) => c.id !== id));
+          // Remove linked anomaly event from Event Feed and Diagnosis card
+          if (targetCmd) {
+            setEvents((prev) =>
+              prev.filter((e) => e.id !== targetCmd.linkedEventId && e.subsystem !== targetCmd.subsystem)
+            );
+          }
+          loadEvents(true);
+          loadCommands(true);
+        })
+        .catch(() => setCommandsError(`Authorization for ${id} failed to transmit. Command left pending.`))
+        .finally(() => setBusyId(null));
+    },
+    [commands, loadEvents, loadCommands]
+  );
 
   const anomalyCount = useMemo(() => events.filter((e) => e.severity !== "info").length, [events]);
   const criticalCount = useMemo(() => events.filter((e) => e.severity === "critical").length, [events]);

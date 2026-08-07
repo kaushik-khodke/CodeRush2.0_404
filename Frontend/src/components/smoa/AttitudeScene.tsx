@@ -6,7 +6,19 @@ import type { AdcsFrame } from "@/lib/smoa/types";
 
 const DEG = Math.PI / 180;
 
-function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> | null }) {
+function Spacecraft({
+  attitude,
+  showSunVector = true,
+  showSensorCone = true,
+  showThermalHeatmap = false,
+  cpuTemp = 35.0,
+}: {
+  attitude: React.RefObject<AdcsFrame | null> | null;
+  showSunVector?: boolean;
+  showSensorCone?: boolean;
+  showThermalHeatmap?: boolean;
+  cpuTemp?: number;
+}) {
   const group = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
@@ -20,17 +32,27 @@ function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> 
     g.quaternion.slerp(q, Math.min(1, delta * 4));
   });
 
+  // Calculate dynamic thermal heatmap color
+  const bodyColor = showThermalHeatmap
+    ? cpuTemp > 65.0
+      ? "#E54D42"
+      : cpuTemp > 48.0
+      ? "#D9A441"
+      : "#1F6F78"
+    : "#8A9099";
+
   return (
     <group ref={group}>
       {/* Bus */}
       <mesh castShadow>
         <boxGeometry args={[1.1, 1.4, 1.1]} />
-        <meshStandardMaterial color="#8A9099" metalness={0.75} roughness={0.35} />
+        <meshStandardMaterial color={bodyColor} metalness={0.75} roughness={0.35} />
       </mesh>
       <mesh position={[0, 0, 0]}>
         <boxGeometry args={[1.14, 0.28, 1.14]} />
         <meshStandardMaterial color="#1F6F78" metalness={0.5} roughness={0.4} />
       </mesh>
+
       {/* Solar arrays */}
       {[-1, 1].map((s) => (
         <group key={s} position={[s * 1.95, 0, 0]}>
@@ -48,16 +70,35 @@ function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> 
           </mesh>
         </group>
       ))}
+
       {/* High-gain antenna */}
       <mesh position={[0, 0.95, 0]} rotation={[Math.PI, 0, 0]}>
         <coneGeometry args={[0.42, 0.34, 24, 1, true]} />
         <meshStandardMaterial color="#D3D6DA" metalness={0.5} roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
-      {/* Payload boresight */}
+
+      {/* Payload optics */}
       <mesh position={[0, -0.9, 0]}>
         <cylinderGeometry args={[0.22, 0.28, 0.5, 20]} />
         <meshStandardMaterial color="#2B2F36" metalness={0.6} roughness={0.4} />
       </mesh>
+
+      {/* ☀️ Sun Vector Visualizer */}
+      {showSunVector && (
+        <group position={[0, 1.5, 2.0]}>
+          <cylinderGeometry args={[0.02, 0.02, 2.5, 8]} />
+          <meshBasicMaterial color="#FFD700" transparent opacity={0.8} />
+        </group>
+      )}
+
+      {/* 📷 Payload Ground Sensor Cone */}
+      {showSensorCone && (
+        <mesh position={[0, -2.5, 0]}>
+          <coneGeometry args={[1.2, 3.0, 32, 1, true]} />
+          <meshBasicMaterial color="#00FFFF" transparent opacity={0.18} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+
       {/* Body axes */}
       <axesHelper args={[2.2]} />
     </group>
@@ -73,7 +114,6 @@ function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> | n
     if (!m) return;
     const a = (angleRef?.current ?? 0) * DEG;
     m.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
-
   });
 
   return (
@@ -97,9 +137,17 @@ function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> | n
 export default function AttitudeScene({
   attitude,
   orbitAngle,
+  showSunVector = true,
+  showSensorCone = true,
+  showThermalHeatmap = false,
+  cpuTemp = 35.0,
 }: {
   attitude: React.RefObject<AdcsFrame | null> | null;
   orbitAngle: React.RefObject<number | null> | null;
+  showSunVector?: boolean;
+  showSensorCone?: boolean;
+  showThermalHeatmap?: boolean;
+  cpuTemp?: number;
 }) {
   return (
     <Canvas camera={{ position: [5.5, 3.2, 6.5], fov: 42 }} dpr={[1, 1.75]}>
@@ -110,7 +158,13 @@ export default function AttitudeScene({
       <Suspense fallback={null}>
         <Stars radius={90} depth={45} count={2600} factor={3.2} saturation={0} fade speed={0.4} />
       </Suspense>
-      <Spacecraft attitude={attitude} />
+      <Spacecraft
+        attitude={attitude}
+        showSunVector={showSunVector}
+        showSensorCone={showSensorCone}
+        showThermalHeatmap={showThermalHeatmap}
+        cpuTemp={cpuTemp}
+      />
       <OrbitTrack angleRef={orbitAngle} />
       <OrbitControls enablePan={false} minDistance={5} maxDistance={16} autoRotate autoRotateSpeed={0.25} />
     </Canvas>
