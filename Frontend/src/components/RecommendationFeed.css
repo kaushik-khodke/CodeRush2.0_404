@@ -2,7 +2,7 @@
   background: var(--bg-panel);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -11,7 +11,7 @@
 .recs__list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-md);
   overflow-y: auto;
 }
 
@@ -19,7 +19,7 @@
   background: var(--bg-panel-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  padding: 13px;
+  padding: var(--space-lg);
   transition: border-color 0.2s ease;
 }
 
@@ -46,18 +46,34 @@
 
 .rec-card__risk {
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.05em;
-  display: flex;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  line-height: 1;
 }
 
-.rec-card__risk-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  box-shadow: 0 0 6px currentColor;
+.rec-card__risk--low {
+  color: var(--accent-green);
+  background: rgba(87, 198, 122, 0.08);
+  border-color: rgba(87, 198, 122, 0.2);
+}
+
+.rec-card__risk--medium {
+  color: var(--accent-amber);
+  background: rgba(240, 168, 59, 0.08);
+  border-color: rgba(240, 168, 59, 0.2);
+}
+
+.rec-card__risk--high {
+  color: var(--accent-red);
+  background: rgba(239, 83, 80, 0.08);
+  border-color: rgba(239, 83, 80, 0.2);
 }
 
 .rec-card__title {
@@ -85,11 +101,11 @@
 }
 
 .rec-card__sim {
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
+  background: rgba(79, 216, 200, 0.02);
+  border: 1px dashed rgba(79, 216, 200, 0.25);
   border-radius: var(--radius-sm);
-  padding: 9px 10px;
-  margin-bottom: 10px;
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .rec-card__sim-label {

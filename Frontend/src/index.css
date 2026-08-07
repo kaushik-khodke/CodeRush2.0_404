@@ -1,4 +1,15 @@
+html {
+  font-size: 14px;
+}
+
 :root {
+  /* Spacing Tokens */
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 14px;
+  --space-lg: 18px;
+  --space-xl: 24px;
+
   /* Color tokens */
   --bg-void: #05070a;
   --bg-panel: #0d131b;

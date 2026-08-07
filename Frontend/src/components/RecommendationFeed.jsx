@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import './RecommendationFeed.css';
 
-const riskColor = {
-  LOW: 'var(--accent-green)',
-  MEDIUM: 'var(--accent-amber)',
-  HIGH: 'var(--accent-red)'
-};
 
 export default function RecommendationFeed({ recommendations, decisions, onDecide, onHover }) {
   const [confirmingAction, setConfirmingAction] = useState(null); // { id, type: 'approved' | 'rejected' }
@@ -44,11 +39,7 @@ export default function RecommendationFeed({ recommendations, decisions, onDecid
             >
               <div className="rec-card__top">
                 <span className="rec-card__id">{rec.id}</span>
-                <span className="rec-card__risk" style={{ color: riskColor[rec.riskScore] }}>
-                  <span
-                    className="rec-card__risk-dot"
-                    style={{ background: riskColor[rec.riskScore] }}
-                  />
+                <span className={`rec-card__risk rec-card__risk--${rec.riskScore.toLowerCase()}`}>
                   {rec.riskScore} RISK
                 </span>
               </div>

@@ -165,7 +165,7 @@ export default function MissionTimeline({ metSeconds, decisions, hoveredRecId })
         {/* Current Time Playhead */}
         {playheadPct >= 0 && playheadPct <= 100 && (
           <div className="timeline__playhead" style={{ left: `calc(${playheadPct}% + 130px)` }}>
-            <div className="timeline__playhead-label">MET</div>
+            <div className="timeline__playhead-label">{formatMET(metSeconds)}</div>
             <div className="timeline__playhead-line" />
           </div>
         )}

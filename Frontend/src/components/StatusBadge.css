@@ -1,0 +1,73 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  line-height: 1;
+  border: 1px solid transparent;
+  vertical-align: middle;
+}
+
+/* Nominal state */
+.status-badge--nominal {
+  color: var(--accent-green);
+  background: rgba(87, 198, 122, 0.08);
+  border-color: rgba(87, 198, 122, 0.2);
+}
+
+/* Caution state */
+.status-badge--caution {
+  color: var(--accent-amber);
+  background: rgba(240, 168, 59, 0.08);
+  border-color: rgba(240, 168, 59, 0.2);
+}
+
+/* Critical state */
+.status-badge--critical {
+  color: var(--accent-red);
+  background: rgba(239, 83, 80, 0.08);
+  border-color: rgba(239, 83, 80, 0.2);
+}
+
+/* Active state */
+.status-badge--active {
+  color: var(--accent-cyan);
+  background: rgba(79, 216, 200, 0.08);
+  border-color: rgba(79, 216, 200, 0.2);
+}
+
+/* Standby state */
+.status-badge--standby {
+  color: var(--text-secondary);
+  background: rgba(148, 163, 179, 0.05);
+  border-color: var(--line);
+}
+
+/* Gating state */
+.status-badge--gating {
+  color: var(--accent-amber);
+  background: rgba(240, 168, 59, 0.08);
+  border-color: rgba(240, 168, 59, 0.2);
+}
+
+/* Status dots */
+.status-badge__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 3px currentColor;
+}
+
+.status-badge__dot--nominal { background: var(--accent-green); }
+.status-badge__dot--caution { background: var(--accent-amber); }
+.status-badge__dot--critical { background: var(--accent-red); }
+.status-badge__dot--active { background: var(--accent-cyan); }
+.status-badge__dot--standby { background: var(--text-tertiary); }
+.status-badge__dot--gating { background: var(--accent-amber); }

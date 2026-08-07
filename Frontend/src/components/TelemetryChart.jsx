@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { evaluateChannelSeverity, rules } from '../lib/conditions';
+import StatusBadge from './StatusBadge.jsx';
 
 export default function TelemetryChart({ channelId, label, series, current, unit }) {
   const [zoomFactor, setZoomFactor] = useState(1.0);
@@ -151,9 +152,7 @@ export default function TelemetryChart({ channelId, label, series, current, unit
               PAUSED
             </span>
           )}
-          <span className="telemetry__status-text" style={{ color: statusColor, fontSize: '11px', fontWeight: 'bold' }}>
-            {status}
-          </span>
+          <StatusBadge status={status} />
         </div>
       </div>
 

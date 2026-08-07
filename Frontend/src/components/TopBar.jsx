@@ -1,10 +1,5 @@
+import StatusBadge from './StatusBadge.jsx';
 import './TopBar.css';
-
-const healthColor = {
-  NOMINAL: 'var(--accent-green)',
-  CAUTION: 'var(--accent-amber)',
-  CRITICAL: 'var(--accent-red)'
-};
 
 export default function TopBar({ spacecraft }) {
   return (
@@ -31,15 +26,8 @@ export default function TopBar({ spacecraft }) {
         </div>
         <div className="topbar__stat">
           <span className="topbar__stat-label">Vehicle Health</span>
-          <span
-            className="topbar__stat-value topbar__health"
-            style={{ color: healthColor[spacecraft.overallHealth] }}
-          >
-            <span
-              className="topbar__health-dot"
-              style={{ background: healthColor[spacecraft.overallHealth] }}
-            />
-            {spacecraft.overallHealth}
+          <span className="topbar__stat-value" style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <StatusBadge status={spacecraft.overallHealth} hasDot={true} />
           </span>
         </div>
       </div>

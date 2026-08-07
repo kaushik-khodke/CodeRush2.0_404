@@ -1,14 +1,21 @@
 .twin {
   background: var(--bg-panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-bright);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: var(--space-lg);
+  box-shadow: 0 0 15px rgba(79, 216, 200, 0.03), inset 0 0 20px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.twin:hover {
+  border-color: rgba(79, 216, 200, 0.3);
+  box-shadow: 0 0 20px rgba(79, 216, 200, 0.05), inset 0 0 20px rgba(0, 0, 0, 0.2);
 }
 
 .twin__layout {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  gap: 16px;
+  gap: var(--space-md);
   align-items: center;
 }
 

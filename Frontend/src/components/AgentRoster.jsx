@@ -1,9 +1,10 @@
+import StatusBadge from './StatusBadge.jsx';
 import './AgentRoster.css';
 
 const statusMeta = {
-  active: { label: 'ACTIVE', color: 'var(--accent-cyan)' },
-  standby: { label: 'STANDBY', color: 'var(--text-tertiary)' },
-  watching: { label: 'GATING', color: 'var(--accent-amber)' }
+  active: { label: 'ACTIVE' },
+  standby: { label: 'STANDBY' },
+  watching: { label: 'GATING' }
 };
 
 export default function AgentRoster({ agents, selectedAgentId, onSelect }) {
@@ -22,10 +23,7 @@ export default function AgentRoster({ agents, selectedAgentId, onSelect }) {
             >
               <div className="roster__card-top">
                 <span className="roster__name">{agent.name}</span>
-                <span className="roster__status" style={{ color: meta.color }}>
-                  <span className="roster__status-dot" style={{ background: meta.color }} />
-                  {meta.label}
-                </span>
+                <StatusBadge status={agent.status} label={meta.label} hasDot={true} />
               </div>
               <div className="roster__role">{agent.role}</div>
               <div className="roster__confidence-track">
