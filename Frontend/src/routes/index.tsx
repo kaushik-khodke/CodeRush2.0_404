@@ -9,8 +9,10 @@ import { ApprovalQueue } from "@/components/smoa/ApprovalQueue";
 import { authorizeCommand, fetchEvents, fetchPendingCommands, formatClock } from "@/lib/smoa/api";
 import { useTelemetry } from "@/lib/smoa/useTelemetry";
 import type { AnomalyEvent, FaultInjection, PendingCommand } from "@/lib/smoa/types";
+import { mockAgents } from "@/lib/smoa/mock";
+import { AgentRoster } from "@/components/smoa/AgentRoster";
 
-const title = "SMOA Mission Control — Helios-3 Operations Console";
+const title = "ORION AI — Mission Operations Control";
 const description =
   "Live spacecraft telemetry, ML Sentinel anomaly diagnoses, and human-authorized flight commanding in one operator console.";
 
@@ -29,7 +31,11 @@ export const Route = createFileRoute("/")({
 });
 
 function OperationsConsole() {
-  const [faults] = useState<FaultInjection[]>([]);
+  const [faults, setFaults] = useState<FaultInjection[]>([]);
+  const { status, history, latest, lastError } = useTelemetry(faults);
+  const [agents] = useState(() => mockAgents());
+  const [selectedAgentId, setSelectedAgentId] = useState("telemetry_monitor");
+
   const [events, setEvents] = useState<AnomalyEvent[]>([]);
   const [commands, setCommands] = useState<PendingCommand[]>([]);
 
@@ -145,8 +151,8 @@ function OperationsConsole() {
         </div>
       )}
 
-      {/* Main Console Content Grid */}
-      <main className="grid min-h-[620px] flex-1 grid-cols-[22rem_minmax(0,1fr)_24rem] gap-2 p-2">
+      <main className="grid min-h-0 flex-1 grid-cols-[20rem_22rem_minmax(0,1fr)_24rem] gap-2 p-2">
+        <AgentRoster agents={agents} selectedAgentId={selectedAgentId} onSelect={setSelectedAgentId} />
         <TelemetryPanel frames={history} status={status} />
         <AttitudeViewer latest={latest} status={status} />
         <EventFeed events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} />

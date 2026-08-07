@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./mission_control.db")
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "groq")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    LANGFUSE_SECRET_KEY: str = os.getenv("LANGFUSE_SECRET_KEY", "")
+    LANGFUSE_PUBLIC_KEY: str = os.getenv("LANGFUSE_PUBLIC_KEY", "")
+    LANGFUSE_BASE_URL: str = os.getenv("LANGFUSE_BASE_URL", "https://us.cloud.langfuse.com")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

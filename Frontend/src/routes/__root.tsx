@@ -77,13 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SMOA — Space Mission Operations Automator" },
+      { title: "ORION AI — Mission Operations Copilot" },
       {
         name: "description",
         content:
           "Mission control console for spacecraft telemetry, AI anomaly diagnoses, and human-authorized flight commanding.",
       },
-      { name: "author", content: "SMOA Flight Operations" },
+      { name: "author", content: "ORION AI Flight Operations" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -98,7 +98,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon-removebg-preview.png", type: "image/png" },
+      { rel: "shortcut icon", href: "/favicon-removebg-preview.png", type: "image/png" },
     ],
   }),
 

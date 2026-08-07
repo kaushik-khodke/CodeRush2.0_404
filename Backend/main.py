@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.db import init_db
-from routers import telemetry, predict, approval, mission, websocket, seeding
+from routers import telemetry, predict, approval, mission, websocket, seeding, agentic
 from config import settings
 
 @asynccontextmanager
@@ -38,6 +38,7 @@ app.include_router(approval.router)
 app.include_router(mission.router)
 app.include_router(websocket.router)
 app.include_router(seeding.router)
+app.include_router(agentic.router)
 
 @app.get("/")
 async def root():
