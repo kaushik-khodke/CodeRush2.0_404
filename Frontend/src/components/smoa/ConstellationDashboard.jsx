@@ -26,18 +26,9 @@ if (typeof window !== "undefined") {
   });
 }
 
-// --- Constellation configuration ---
 const satellitesConfig = [
   { id: "GSAT-201", plane: 0, phase: 0 },
   { id: "GSAT-204", plane: 0, phase: 72 },
-  { id: "GSAT-206", plane: 0, phase: 144 },
-  { id: "GSAT-207", plane: 0, phase: 216 },
-  { id: "GSAT-211", plane: 1, phase: 30 },
-  { id: "GSAT-212", plane: 1, phase: 110 },
-  { id: "GSAT-216", plane: 1, phase: 230 },
-  { id: "GSAT-217", plane: 2, phase: 60 },
-  { id: "GSAT-219", plane: 2, phase: 180 },
-  { id: "GSAT-222", plane: 2, phase: 300 },
 ];
 
 const EarthRadiusScale = 1.5;
