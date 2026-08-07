@@ -76,9 +76,9 @@ export function useTelemetry(faults: FaultInjection[], source: "simulator" | "di
       socket.onmessage = (evt) => {
         try {
           const parsed = JSON.parse(evt.data as string);
-          if (parsed.type === "TELEMETRY_FRAME" && parsed.frame) {
+          if (parsed && parsed.type === "TELEMETRY_FRAME" && parsed.frame) {
             push(parsed.frame as TelemetryFrame);
-          } else if (parsed.met && parsed.power) {
+          } else if (parsed && parsed.met && parsed.power) {
             push(parsed as TelemetryFrame);
           }
         } catch {

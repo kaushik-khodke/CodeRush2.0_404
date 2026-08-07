@@ -14,6 +14,7 @@ import { useTelemetry } from "@/lib/smoa/useTelemetry";
 import type { AnomalyEvent, FaultInjection, PendingCommand } from "@/lib/smoa/types";
 import { mockAgents } from "@/lib/smoa/mock";
 import { AgentRoster } from "@/components/smoa/AgentRoster";
+import { ConstellationWidget } from "@/components/ConstellationWidget";
 import { MultiAgentConsensusPanel } from "@/components/smoa/MultiAgentConsensusPanel";
 
 const title = "ORION AI — Mission Operations Control";
@@ -122,7 +123,9 @@ function OperationsConsole() {
         anomalyScore={latest?.anomalyScore ?? 0.08}
         onToggleAgents={() => setAgentSidebarOpen((prev) => !prev)}
         agentsOpen={agentSidebarOpen}
+        telemetrySource={telemetrySource}
       />
+
 
       {/* Control Room Agent Roster Sidebar Drawer */}
       <AnimatePresence>
@@ -218,9 +221,9 @@ function OperationsConsole() {
               <SelectItem value="digital-twin">Digital Twin</SelectItem>
             </SelectContent>
           </Select>
-          <FaultInjectionPanel faults={faults} onChange={setFaults} />
         </div>
       </div>
+
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import type { AdcsFrame } from "@/lib/smoa/types";
+import { getPositionAtTime } from "@/lib/orbit";
 
 const DEG = Math.PI / 180;
 
@@ -105,27 +106,68 @@ function Spacecraft({
   );
 }
 
-function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> | null }) {
+function OrbitTrack({
+  angleRef,
+  metRef,
+}: {
+  angleRef: React.RefObject<number | null> | null;
+  metRef?: React.RefObject<number> | null;
+}) {
   const marker = useRef<THREE.Mesh>(null);
-  const radius = 4.6;
+  const lineRef = useRef<THREE.Line>(null);
+  const radius = 3.6;
 
   useFrame(() => {
     const m = marker.current;
+    const l = lineRef.current;
     if (!m) return;
-    const a = (angleRef?.current ?? 0) * DEG;
-    m.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+
+    if (metRef?.current) {
+      // J2-perturbed orbit coordinates
+      const t = metRef.current;
+      const pos = getPositionAtTime(t);
+      m.position.set(pos[0], pos[1], pos[2]);
+
+      if (l) {
+        const points: THREE.Vector3[] = [];
+        const period = 5954;
+        const steps = 64;
+        for (let i = 0; i <= steps; i++) {
+          const checkT = t - period + (i * period) / steps;
+          const p = getPositionAtTime(checkT);
+          points.push(new THREE.Vector3(p[0], p[1], p[2]));
+        }
+        l.geometry.setFromPoints(points);
+      }
+    } else {
+      // Simplified circular orbit path fallback
+      const a = (angleRef?.current ?? 0) * DEG;
+      m.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+
+      if (l) {
+        const points: THREE.Vector3[] = [];
+        for (let i = 0; i <= 64; i++) {
+          const theta = (i * 2 * Math.PI) / 64;
+          points.push(new THREE.Vector3(Math.cos(theta) * radius, 0, Math.sin(theta) * radius));
+        }
+        l.geometry.setFromPoints(points);
+      }
+    }
   });
 
   return (
-    <group rotation={[0.35, 0, 0.18]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[radius - 0.012, radius + 0.012, 128]} />
-        <meshBasicMaterial color="#1F6F78" transparent opacity={0.55} side={THREE.DoubleSide} />
-      </mesh>
+    <group>
+      {/* Dynamic trajectory line */}
+      <line ref={lineRef}>
+        <bufferGeometry />
+        <lineBasicMaterial color="#1F6F78" transparent opacity={0.55} />
+      </line>
+      {/* Active satellite position indicator */}
       <mesh ref={marker}>
         <sphereGeometry args={[0.11, 16, 16]} />
         <meshBasicMaterial color="#D9A441" />
       </mesh>
+      {/* Central Earth wireframe reference */}
       <mesh>
         <sphereGeometry args={[1.5, 32, 32]} />
         <meshStandardMaterial color="#20323A" metalness={0.1} roughness={0.9} wireframe />
@@ -137,6 +179,7 @@ function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> | n
 export default function AttitudeScene({
   attitude,
   orbitAngle,
+  metRef,
   showSunVector = true,
   showSensorCone = true,
   showThermalHeatmap = false,
@@ -144,6 +187,7 @@ export default function AttitudeScene({
 }: {
   attitude: React.RefObject<AdcsFrame | null> | null;
   orbitAngle: React.RefObject<number | null> | null;
+  metRef?: React.RefObject<number> | null;
   showSunVector?: boolean;
   showSensorCone?: boolean;
   showThermalHeatmap?: boolean;
@@ -165,7 +209,7 @@ export default function AttitudeScene({
         showThermalHeatmap={showThermalHeatmap}
         cpuTemp={cpuTemp}
       />
-      <OrbitTrack angleRef={orbitAngle} />
+      <OrbitTrack angleRef={orbitAngle} metRef={metRef} />
       <OrbitControls enablePan={false} minDistance={5} maxDistance={16} autoRotate autoRotateSpeed={0.25} />
     </Canvas>
   );

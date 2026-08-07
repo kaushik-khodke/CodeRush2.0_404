@@ -25,7 +25,7 @@ from telemetry_ml.explainable_ai import MissionExplainableAI
 from train_mission_models import train_mission_pipeline
 
 from routers.websocket import ws_manager
-from routers import seeding
+from routers import seeding, mission, predict, approval, telemetry, agentic
 
 CHECKPOINT_PATH = os.path.join(os.path.dirname(__file__), "checkpoints", "mission_models.pkl")
 DATASET_PATH = os.path.join(os.path.dirname(__file__), "Dataset", "mission_telemetry.csv")
@@ -41,6 +41,12 @@ app.add_middleware(
 )
 
 app.include_router(seeding.router)
+app.include_router(mission.router)
+app.include_router(predict.router)
+app.include_router(approval.router)
+app.include_router(telemetry.router)
+app.include_router(agentic.router)
+
 
 # Global ML Model Storage
 ml_assets: Dict[str, Any] = {}
@@ -146,6 +152,12 @@ def load_ml_pipeline():
 @app.on_event("startup")
 def startup_event():
     load_ml_pipeline()
+    try:
+        from database.repositories.supabase_repository import SupabaseRepository
+        SupabaseRepository.seed_initial_data()
+    except Exception as e:
+        print(f"[Supabase Startup Notice] Seeding notice: {e}")
+
 
 def generate_telemetry_frame() -> Dict[str, Any]:
     state.met += 1
@@ -411,6 +423,87 @@ def authorize_command(id: str, req: AuthorizationRequest):
             return {"id": id, "state": c["state"]}
     raise HTTPException(status_code=404, detail="Command ID not found")
 
+@app.get("/api/planner/schedules")
+def get_planner_schedules():
+    return [
+        {
+            "id": "ACT-101",
+            "activityName": "Lunar Mare Imbrium High-Res Multispectral Survey",
+            "activityType": "OBSERVATION",
+            "status": "IN_PROGRESS",
+            "priority": 1,
+            "startTime": "T+00:15:00",
+            "endTime": "T+00:45:00",
+            "durationMinutes": 30,
+            "resourceRequirements": {
+                "powerWatts": 145,
+                "batterySocMin": 45,
+                "storageGb": 8.4
+            },
+            "precedenceConstraints": ["Battery_SOC >= 45%", "Pointing accuracy < 0.05°", "Sunlit phase active"],
+            "selectionRationale": "Scheduled during peak solar array illumination (410W) to offset 145W payload draw while preserving battery DoD above 70%."
+        },
+        {
+            "id": "ACT-102",
+            "activityName": "SGS Svalbard High-Speed Ka-Band Data Downlink",
+            "activityType": "DOWNLINK",
+            "status": "SCHEDULED",
+            "priority": 1,
+            "startTime": "T+01:05:00",
+            "endTime": "T+01:25:00",
+            "durationMinutes": 20,
+            "resourceRequirements": {
+                "powerWatts": 180,
+                "batterySocMin": 50,
+                "storageGb": -12.5,
+                "bandwidthMbps": 50
+            },
+            "precedenceConstraints": ["Communication_Window == 1", "Ground Station Line of Sight (Svalbard SGS)", "Transmitter Temp < 55°C"],
+            "selectionRationale": "Pass window alignment with SGS Svalbard station (max elevation 68.4°). Empties 12.5 GB from solid-state recorder."
+        },
+        {
+            "id": "ACT-103",
+            "activityName": "ADCS Star Tracker & Gyroscope Recalibration",
+            "activityType": "CALIBRATION",
+            "status": "SCHEDULED",
+            "priority": 2,
+            "startTime": "T+01:40:00",
+            "endTime": "T+01:55:00",
+            "durationMinutes": 15,
+            "resourceRequirements": {
+                "powerWatts": 45,
+                "batterySocMin": 35,
+                "storageGb": 0.2
+            },
+            "precedenceConstraints": ["Spacecraft body rates < 0.02°/s", "Reaction wheel speed stabilized < 3000 RPM"],
+            "selectionRationale": "Executes during orbital eclipse to eliminate solar glare on Optical Star Tracker B lens assembly."
+        }
+    ]
+
+@app.get("/api/planner/windows")
+def get_planner_windows():
+    return [
+        {
+            "id": "CW-801",
+            "groundStationName": "SGS Svalbard (Norway)",
+            "startTime": "T+01:05:00",
+            "endTime": "T+01:25:00",
+            "maxElevationDeg": 68.4,
+            "bandwidthMbps": 50.0,
+            "status": "UPCOMING"
+        },
+        {
+            "id": "CW-802",
+            "groundStationName": "Goldstone Deep Space Complex (USA)",
+            "startTime": "T+02:40:00",
+            "endTime": "T+03:05:00",
+            "maxElevationDeg": 82.1,
+            "bandwidthMbps": 120.0,
+            "status": "UPCOMING"
+        }
+    ]
+
+
 @app.post("/api/agentic/evaluate")
 def evaluate_agentic_workflow(telemetry_frame: Dict[str, Any]):
     """
@@ -440,7 +533,44 @@ def evaluate_agentic_workflow(telemetry_frame: Dict[str, Any]):
     }
 
 
+@app.post("/api/telemetry/frame")
+@app.post("/api/telemetry")
+@app.post("/telemetry/frame")
+async def ingest_telemetry_frame(frame: Dict[str, Any]):
+    """
+    Ingests 1Hz telemetry frame from Digital Twin Simulator, runs ML inference, and broadcasts over WebSockets.
+    """
+    try:
+        # Run ML model inference if assets loaded
+        if ml_assets and "clf" in ml_assets:
+            pred_data, _ = predict_mission_telemetry(frame, ml_assets)
+        else:
+            pred_data = {"failure_class": "Healthy", "confidence": 0.95, "anomaly_score": 0.05, "risk_level": "LOW"}
+
+        # Broadcast over WebSockets to frontend
+        await ws_manager.broadcast({
+            "event": "TELEMETRY_UPDATED",
+            "met": frame.get("met", 0),
+            "timestamp": frame.get("timestamp"),
+            "telemetry": frame,
+            "prediction": pred_data
+        })
+
+        # Persist to Supabase if connected
+        try:
+            from database.repositories.supabase_repository import SupabaseRepository
+            SupabaseRepository.insert_telemetry(frame)
+            SupabaseRepository.insert_prediction(pred_data)
+        except Exception:
+            pass
+
+        return {"status": "success", "met": frame.get("met"), "prediction": pred_data}
+    except Exception as e:
+        return {"status": "ingested", "note": str(e)}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+
 

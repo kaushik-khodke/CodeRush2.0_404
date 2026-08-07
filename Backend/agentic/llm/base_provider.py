@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Dict, Any, Optional
 from agentic.schemas.llm_response import StandardLLMResponse
+from agentic.tracing import log_agent_trace
 
 logger = logging.getLogger("LLMProvider")
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +27,24 @@ class BaseLLMProvider(abc.ABC):
         """
         pass
 
+    def log_trace(self, prompt: str, result: StandardLLMResponse, metadata: Optional[dict] = None):
+        """
+        Logs generation trace directly to Langfuse Cloud for full observability.
+        """
+        try:
+            log_agent_trace(
+                trace_name=f"SMOA Mission Anomaly Analysis ({self.name.upper()})",
+                agent_name=f"{self.name.capitalize()} Agent ({self.model_name})",
+                prompt=prompt,
+                output=result.model_dump(),
+                metadata=metadata or {"provider": self.name, "model": self.model_name},
+                model_name=self.model_name
+            )
+        except Exception as e:
+            logger.warning(f"[{self.name}] Langfuse trace log notice: {e}")
+
     def parse_json_response(self, text: str) -> Dict[str, Any]:
+
         """
         Extracts and parses clean JSON from LLM text output.
         Handles markdown delimiters ```json ... ```.

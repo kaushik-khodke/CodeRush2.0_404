@@ -25,7 +25,13 @@ export default defineConfig({
     react(),
     tsconfigPaths(),
   ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   root: __dirname,
+
   server: {
     port: 5174,
     strictPort: true,

@@ -20,6 +20,8 @@ interface TopBarProps {
   anomalyScore?: number;
   onToggleAgents?: () => void;
   agentsOpen?: boolean;
+  showNav?: boolean;
+  telemetrySource?: "simulator" | "digital-twin";
 }
 
 export function TopBar({
@@ -30,6 +32,8 @@ export function TopBar({
   anomalyScore,
   onToggleAgents,
   agentsOpen,
+  showNav = true,
+  telemetrySource = "digital-twin",
 }: TopBarProps) {
   const meta = statusMeta[status];
 
@@ -48,34 +52,35 @@ export function TopBar({
       </div>
 
       <nav className="flex items-center gap-2">
-        <button
-          onClick={onToggleAgents}
-          className={cn(
-            "flex items-center gap-1.5 rounded-sm px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.1em] uppercase transition-colors duration-150 border cursor-pointer",
-            agentsOpen
-              ? "bg-primary/20 text-primary border-primary"
-              : "border-border bg-surface-raised/40 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
-          )}
-        >
-          <Cpu className="size-3.5 text-primary" />
-          Control Room (9 Nodes)
-        </button>
-
-        {[
-          { to: "/", label: "Operations" },
-          { to: "/planner", label: "Mission Planner" },
-          { to: "/replay", label: "Digital Twin Replay" },
-        ].map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            activeOptions={{ exact: item.to === "/" }}
-            className="rounded-sm px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase transition-colors duration-150 hover:bg-surface-raised hover:text-foreground"
-            activeProps={{ className: "bg-surface-raised !text-foreground" }}
+        {onToggleAgents && (
+          <button
+            onClick={onToggleAgents}
+            className={cn(
+              "flex items-center gap-1.5 rounded-sm px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.1em] uppercase transition-colors duration-150 border cursor-pointer",
+              agentsOpen
+                ? "bg-primary/20 text-primary border-primary"
+                : "border-border bg-surface-raised/40 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
+            )}
           >
-            {item.label}
-          </Link>
-        ))}
+            <Cpu className="size-3.5 text-primary" />
+            Control Room (9 Nodes)
+          </button>
+        )}
+
+        {showNav &&
+          [
+            { to: "/", label: "Operations" },
+            { to: "/planner", label: "Mission Planner" },
+            { to: "/replay", label: "Digital Twin Replay" },
+          ].map((item) => (
+            <a
+              key={item.to}
+              href={item.to}
+              className="rounded-sm px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase transition-colors duration-150 hover:bg-surface-raised hover:text-foreground"
+            >
+              {item.label}
+            </a>
+          ))}
       </nav>
 
       <div className="flex items-center gap-4">
@@ -84,12 +89,20 @@ export function TopBar({
           <div className="num text-sm text-foreground">{met === null ? "---:--:--:--" : formatMet(met)}</div>
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-sm border border-primary/40 bg-primary/10 px-2.5 py-1.5">
-          <Satellite className="size-3.5 text-primary" />
-          <span className="font-tech text-[0.68rem] font-bold text-primary tracking-[0.08em] uppercase">
-            BSK Twin Active
+        <div
+          className={cn(
+            "flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 transition-colors duration-200",
+            telemetrySource === "digital-twin"
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-amber-500/40 bg-amber-950/20 text-amber-400"
+          )}
+        >
+          <Satellite className="size-3.5" />
+          <span className="font-tech text-[0.68rem] font-bold tracking-[0.08em] uppercase">
+            {telemetrySource === "digital-twin" ? "BSK Twin Active" : "Local Simulator Active"}
           </span>
         </div>
+
 
         {anomalyScore !== undefined && (
           <div className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5">

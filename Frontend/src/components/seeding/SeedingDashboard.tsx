@@ -375,16 +375,17 @@ export function SeedingDashboard() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-tech text-xl font-bold tracking-wider uppercase text-cyan-400">
-                  SMOA Spacecraft Telemetry Data Seeding Controller
+                  SMOA Spacecraft Digital Twin Simulation Controller
                 </h1>
                 <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/40 text-[0.65rem] font-tech font-semibold text-cyan-300">
-                  PORT 5174 · 52 DATASET PARAMS
+                  PORT 5174 · BASILISK TWIN STREAM
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Isolated Data Seeding Engine · Supabase Database Sync &amp; Full 52-Parameter Anomaly Generator
+                Dedicated Basilisk Physics Engine &amp; Subsystem Simulation Control Console · Supabase Realtime CDC Active
               </p>
             </div>
+
           </div>
         </div>
 

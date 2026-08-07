@@ -33,7 +33,10 @@ class OllamaProvider(BaseLLMProvider):
                 raw_text = res_data.get("response", "")
                 data = self.parse_json_response(raw_text)
                 data["provider"] = "ollama"
-                return StandardLLMResponse(**data)
+                res_obj = StandardLLMResponse(**data)
+                self.log_trace(user_prompt, res_obj)
+                return res_obj
+
         except Exception as e:
             logger.info(f"[OllamaProvider] Local server at {self.base_url} unavailable or timing out: {e}")
             return self.create_fallback_response(

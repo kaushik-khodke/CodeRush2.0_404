@@ -33,6 +33,7 @@ function Readout({ label, value, unit }: { label: string; value: string; unit: s
 export function AttitudeViewer({ latest, status }: { latest: TelemetryFrame | null; status: LinkStatus }) {
   const attitude = useRef(latest?.adcs ?? { roll: 0, pitch: 0, yaw: 0, bodyRate: 0, wheelRpm: 0 });
   const orbitAngle = useRef(latest?.orbitAngle ?? 0);
+  const metRef = useRef(latest?.met ?? 128400);
 
   // Digital Twin Overlay Toggles
   const [showSunVector, setShowSunVector] = useState(true);
@@ -43,6 +44,7 @@ export function AttitudeViewer({ latest, status }: { latest: TelemetryFrame | nu
     if (!latest) return;
     attitude.current = latest.adcs;
     orbitAngle.current = latest.orbitAngle;
+    metRef.current = latest.met;
   }, [latest]);
 
   const f = (n: number | undefined, d = 2) => (n === undefined ? "––.–" : n.toFixed(d));
@@ -109,6 +111,7 @@ export function AttitudeViewer({ latest, status }: { latest: TelemetryFrame | nu
             <AttitudeScene
               attitude={attitude}
               orbitAngle={orbitAngle}
+              metRef={metRef}
               showSunVector={showSunVector}
               showSensorCone={showSensorCone}
               showThermalHeatmap={showThermalHeatmap}

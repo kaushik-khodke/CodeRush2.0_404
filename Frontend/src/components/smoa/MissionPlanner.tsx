@@ -118,6 +118,7 @@ export function MissionPlanner() {
     return () => clearInterval(interval);
   }, []);
 
+
   // Live Dynamic Telemetry Gauges
   const livePowerGeneration = latest?.power?.arrayPower ?? 410.0;
   const liveBatterySoc = latest?.power?.stateOfCharge ?? 88.5;
