@@ -14,6 +14,14 @@ jspm_packages/
 # Build outputs
 dist/
 dist-ssr/
+<<<<<<< HEAD
+=======
+.output/
+.vinxi/
+.tanstack/
+.nitro/
+.wrangler/
+>>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f
 *.local
 out/
 build/
@@ -38,6 +46,10 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
+<<<<<<< HEAD
+=======
+<<<<<<<< HEAD:Frontend/.gitignore
+>>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f
 # Python & Virtual Environments
 .venv/
 venv/
@@ -49,9 +61,19 @@ checkpoints/
 *.pth
 *.pkl
 
+<<<<<<< HEAD
 # Heavy Datasets & Model Assets
 Dataset/data/data/
 Backend/Dataset/data/data/
 *.npy
 *.csv
 !Backend/Dataset/README.md
+=======
+# Heavy Binary Datasets & Models
+Dataset/data/data/
+*.npy
+========
+
+.agents
+>>>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f:.gitignore
+>>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f
