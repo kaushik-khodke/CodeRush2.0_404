@@ -42,3 +42,18 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Python & Virtual Environments
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+checkpoints/
+*.pth
+*.pkl
+
+# Heavy Binary Datasets & Models
+Dataset/data/data/
+*.npy
