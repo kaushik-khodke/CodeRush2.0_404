@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
+  Archive,
   Battery,
   Calendar,
   CheckCircle2,
@@ -10,6 +11,7 @@ import {
   Clock,
   Cpu,
   Database,
+  Filter,
   HardDrive,
   Info,
   Plus,
@@ -33,22 +35,26 @@ const typeBadges: Record<
   SAFE_MODE_TRANSITION: { label: "SAFE-MODE", color: "border-critical/60 bg-critical/15 text-critical" },
 };
 
-const statusBadges: Record<ActivityScheduleItem["status"], string> = {
-  IN_PROGRESS: "bg-nominal/20 text-nominal border-nominal",
-  SCHEDULED: "bg-primary/20 text-primary border-primary",
+const statusBadges: Record<ActivityScheduleItem["status"] | "EXPIRED", string> = {
+  IN_PROGRESS: "bg-nominal/20 text-nominal border-nominal animate-pulse font-bold",
+  SCHEDULED: "bg-primary/20 text-primary border-primary font-semibold",
   FEASIBLE: "bg-surface-raised text-muted-foreground border-border",
-  COMPLETED: "bg-muted-foreground/20 text-muted-foreground border-border",
-  FAILED: "bg-critical/20 text-critical border-critical",
+  COMPLETED: "bg-muted-foreground/20 text-muted-foreground border-border line-through opacity-70",
+  EXPIRED: "bg-warning/20 text-warning border-warning/80 opacity-80",
+  FAILED: "bg-critical/20 text-critical border-critical font-bold",
 };
 
 export function MissionPlanner() {
   const { latest } = useTelemetry([]);
 
-  const [schedules, setSchedules] = useState<ActivityScheduleItem[]>(() => mockActivitySchedules());
+  const [schedules, setSchedules] = useState<(ActivityScheduleItem | (ActivityScheduleItem & { status: "EXPIRED" }))[]>(
+    () => mockActivitySchedules()
+  );
   const [commWindows, setCommWindows] = useState<CommunicationWindowInfo[]>(() => mockCommunicationWindows());
   const [expandedId, setExpandedId] = useState<string | null>("ACT-101");
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [filterTab, setFilterTab] = useState<"ALL" | "ACTIVE" | "ARCHIVED">("ALL");
 
   // Form state
   const [newTitle, setNewTitle] = useState("");
@@ -107,6 +113,7 @@ export function MissionPlanner() {
   const liveBatterySoc = latest?.power?.stateOfCharge ?? 88.5;
   const liveSignalDbm = latest?.comms?.signalDbm ?? -78.5;
   const livePacketLoss = latest?.comms?.packetLoss ?? 0.0;
+  const liveMet = latest?.met ?? 90;
 
   // Active in-progress power draw
   const activePowerDraw = useMemo(() => {
@@ -120,6 +127,16 @@ export function MissionPlanner() {
     () => schedules.reduce((acc, s) => acc + Math.max(0, s.resourceRequirements.storageGb), 0),
     [schedules]
   );
+
+  const filteredSchedules = useMemo(() => {
+    if (filterTab === "ACTIVE") {
+      return schedules.filter((s) => s.status === "IN_PROGRESS" || s.status === "SCHEDULED" || s.status === "FEASIBLE");
+    }
+    if (filterTab === "ARCHIVED") {
+      return schedules.filter((s) => s.status === "COMPLETED" || (s.status as string) === "EXPIRED" || s.status === "FAILED");
+    }
+    return schedules;
+  }, [schedules, filterTab]);
 
   const handleOptimize = () => {
     setIsOptimizing(true);
@@ -139,6 +156,20 @@ export function MissionPlanner() {
       });
       setIsOptimizing(false);
     }, 800);
+  };
+
+  const handleExpireCompleted = () => {
+    setSchedules((prev) =>
+      prev.map((item) => {
+        if (item.status === "IN_PROGRESS") {
+          return { ...item, status: "COMPLETED" };
+        }
+        if (item.status === "SCHEDULED" && item.priority > 2) {
+          return { ...item, status: "EXPIRED" as any };
+        }
+        return item;
+      })
+    );
   };
 
   const handleAddActivity = (e: React.FormEvent) => {
@@ -282,7 +313,7 @@ export function MissionPlanner() {
       {/* Main Dynamic Activity Schedule Container */}
       <div className="panel flex flex-col">
         {/* Header Action Bar */}
-        <div className="panel-header flex items-center justify-between">
+        <div className="panel-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Calendar className="size-4 text-primary" />
             <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">
@@ -293,11 +324,51 @@ export function MissionPlanner() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 rounded-sm border border-border bg-background p-1">
+              <button
+                onClick={() => setFilterTab("ALL")}
+                className={cn(
+                  "px-2 py-0.5 font-tech text-[0.65rem] font-semibold uppercase rounded-xs transition-colors cursor-pointer",
+                  filterTab === "ALL" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All ({schedules.length})
+              </button>
+              <button
+                onClick={() => setFilterTab("ACTIVE")}
+                className={cn(
+                  "px-2 py-0.5 font-tech text-[0.65rem] font-semibold uppercase rounded-xs transition-colors cursor-pointer",
+                  filterTab === "ACTIVE" ? "bg-nominal/20 text-nominal" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Active / Scheduled
+              </button>
+              <button
+                onClick={() => setFilterTab("ARCHIVED")}
+                className={cn(
+                  "px-2 py-0.5 font-tech text-[0.65rem] font-semibold uppercase rounded-xs transition-colors cursor-pointer",
+                  filterTab === "ARCHIVED" ? "bg-warning/20 text-warning" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Completed / Expired
+              </button>
+            </div>
+
+            <button
+              onClick={handleExpireCompleted}
+              title="Transition finished activities to COMPLETED and expired windows to EXPIRED"
+              className="inline-flex items-center gap-1 rounded-sm border border-border bg-surface-raised px-2.5 py-1 font-tech text-[0.68rem] font-semibold text-muted-foreground hover:text-foreground uppercase cursor-pointer"
+            >
+              <Archive className="size-3 text-warning" />
+              Tick Lifecycle
+            </button>
+
             <button
               onClick={handleOptimize}
               disabled={isOptimizing}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-primary/60 bg-primary/15 px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.08em] text-primary uppercase transition-all duration-150 hover:bg-primary/25 cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-primary/60 bg-primary/15 px-3 py-1 font-tech text-[0.7rem] font-semibold tracking-[0.08em] text-primary uppercase transition-all duration-150 hover:bg-primary/25 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={cn("size-3.5", isOptimizing && "animate-spin")} />
               {isOptimizing ? "Solving..." : "Re-Optimize Schedule"}
@@ -305,7 +376,7 @@ export function MissionPlanner() {
 
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface-raised px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.08em] uppercase transition-colors duration-150 hover:border-border-strong text-foreground cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface-raised px-3 py-1 font-tech text-[0.7rem] font-semibold tracking-[0.08em] uppercase transition-colors duration-150 hover:border-border-strong text-foreground cursor-pointer"
             >
               <Plus className="size-3.5 text-nominal" />
               Queue Activity
@@ -315,122 +386,128 @@ export function MissionPlanner() {
 
         {/* Activity List */}
         <div className="divide-y divide-border">
-          {schedules.map((item) => {
-            const isExpanded = expandedId === item.id;
-            const badge = typeBadges[item.activityType] || typeBadges.OBSERVATION;
-            const statusStyle = statusBadges[item.status] || statusBadges.FEASIBLE;
+          {filteredSchedules.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground font-tech text-xs uppercase">
+              No activities found in this filter view.
+            </div>
+          ) : (
+            filteredSchedules.map((item) => {
+              const isExpanded = expandedId === item.id;
+              const badge = typeBadges[item.activityType] || typeBadges.OBSERVATION;
+              const statusStyle = statusBadges[item.status] || statusBadges.FEASIBLE;
 
-            return (
-              <div key={item.id} className="transition-colors duration-150 hover:bg-surface-raised/20">
-                <div
-                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                  className="flex items-center justify-between p-3.5 cursor-pointer select-none"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="font-mono text-xs font-semibold text-muted-foreground bg-background border border-border px-2 py-0.5 rounded-xs shrink-0">
-                      {item.id}
-                    </span>
+              return (
+                <div key={item.id} className="transition-colors duration-150 hover:bg-surface-raised/20">
+                  <div
+                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                    className="flex items-center justify-between p-3.5 cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-mono text-xs font-semibold text-muted-foreground bg-background border border-border px-2 py-0.5 rounded-xs shrink-0">
+                        {item.id}
+                      </span>
 
-                    <span
-                      className={cn(
-                        "rounded-sm border px-2 py-0.5 font-tech text-[0.62rem] font-bold tracking-[0.08em] uppercase shrink-0",
-                        badge.color
-                      )}
-                    >
-                      {badge.label}
-                    </span>
+                      <span
+                        className={cn(
+                          "rounded-sm border px-2 py-0.5 font-tech text-[0.62rem] font-bold tracking-[0.08em] uppercase shrink-0",
+                          badge.color
+                        )}
+                      >
+                        {badge.label}
+                      </span>
 
-                    <span className="font-tech text-sm font-bold text-foreground truncate">
-                      {item.activityName}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-right leading-tight hidden md:block">
-                      <span className="num text-xs text-foreground font-semibold">{item.startTime}</span>
-                      <span className="label-tech text-[0.65rem] text-muted-foreground block">
-                        Duration {item.durationMinutes}m
+                      <span className="font-tech text-sm font-bold text-foreground truncate">
+                        {item.activityName}
                       </span>
                     </div>
 
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 font-tech text-[0.62rem] font-bold uppercase",
-                        statusStyle
-                      )}
-                    >
-                      {item.status.replace("_", " ")}
-                    </span>
-
-                    {isExpanded ? (
-                      <ChevronUp className="size-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="size-4 text-muted-foreground" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Expanded Solver Rationale & Precedence Constraints */}
-                {isExpanded && (
-                  <div className="bg-surface-raised/40 p-4 border-t border-border/50 space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-background/60 p-3 rounded-md border border-border/40">
-                      <div>
-                        <span className="label-tech text-[0.65rem] text-muted-foreground block uppercase">
-                          Power Required
-                        </span>
-                        <span className="num text-sm font-semibold text-warning">
-                          {item.resourceRequirements.powerWatts} W
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right leading-tight hidden md:block">
+                        <span className="num text-xs text-foreground font-semibold">{item.startTime}</span>
+                        <span className="label-tech text-[0.65rem] text-muted-foreground block">
+                          Duration {item.durationMinutes}m
                         </span>
                       </div>
-                      <div>
-                        <span className="label-tech text-[0.65rem] text-muted-foreground block uppercase">
-                          Min Battery SoC Bound
-                        </span>
-                        <span className="num text-sm font-semibold text-nominal">
-                          ≥ {item.resourceRequirements.batterySocMin} %
-                        </span>
-                      </div>
-                      <div>
-                        <span className="label-tech text-[0.65rem] text-muted-foreground block uppercase">
-                          Storage Buffer Delta
-                        </span>
-                        <span className="num text-sm font-semibold text-primary">
-                          {item.resourceRequirements.storageGb > 0 ? "+" : ""}
-                          {item.resourceRequirements.storageGb} GB
-                        </span>
-                      </div>
-                    </div>
 
-                    <div>
-                      <span className="font-tech text-[0.7rem] font-semibold text-foreground uppercase tracking-wider block mb-1">
-                        Satisfied Precedence Constraints
+                      <span
+                        className={cn(
+                          "rounded-full border px-2 py-0.5 font-tech text-[0.62rem] font-bold uppercase",
+                          statusStyle
+                        )}
+                      >
+                        {item.status.replace("_", " ")}
                       </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {item.precedenceConstraints.map((c, i) => (
-                          <span
-                            key={i}
-                            className="inline-flex items-center gap-1 rounded-sm border border-nominal/40 bg-nominal/10 px-2 py-0.5 font-tech text-[0.65rem] text-nominal font-medium"
-                          >
-                            <CheckCircle2 className="size-3" />
-                            {c}
+
+                      {isExpanded ? (
+                        <ChevronUp className="size-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="size-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Solver Rationale & Precedence Constraints */}
+                  {isExpanded && (
+                    <div className="bg-surface-raised/40 p-4 border-t border-border/50 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-background/60 p-3 rounded-md border border-border/40">
+                        <div>
+                          <span className="label-tech text-[0.65rem] text-muted-foreground block uppercase">
+                            Power Required
                           </span>
-                        ))}
+                          <span className="num text-sm font-semibold text-warning">
+                            {item.resourceRequirements.powerWatts} W
+                          </span>
+                        </div>
+                        <div>
+                          <span className="label-tech text-[0.65rem] text-muted-foreground block uppercase">
+                            Min Battery SoC Bound
+                          </span>
+                          <span className="num text-sm font-semibold text-nominal">
+                            ≥ {item.resourceRequirements.batterySocMin} %
+                          </span>
+                        </div>
+                        <div>
+                          <span className="label-tech text-[0.65rem] text-muted-foreground block uppercase">
+                            Storage Buffer Delta
+                          </span>
+                          <span className="num text-sm font-semibold text-primary">
+                            {item.resourceRequirements.storageGb > 0 ? "+" : ""}
+                            {item.resourceRequirements.storageGb} GB
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="font-tech text-[0.7rem] font-semibold text-foreground uppercase tracking-wider block mb-1">
+                          Satisfied Precedence Constraints
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {item.precedenceConstraints.map((c, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 rounded-sm border border-nominal/40 bg-nominal/10 px-2 py-0.5 font-tech text-[0.65rem] text-nominal font-medium"
+                            >
+                              <CheckCircle2 className="size-3" />
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="font-tech text-[0.7rem] font-semibold text-foreground uppercase tracking-wider block mb-1">
+                          AI Planner Rationale ("Why Order Selected")
+                        </span>
+                        <p className="text-xs text-muted-foreground leading-relaxed bg-background p-3 rounded-md border border-border/40 font-mono">
+                          {item.selectionRationale}
+                        </p>
                       </div>
                     </div>
-
-                    <div>
-                      <span className="font-tech text-[0.7rem] font-semibold text-foreground uppercase tracking-wider block mb-1">
-                        AI Planner Rationale ("Why Order Selected")
-                      </span>
-                      <p className="text-xs text-muted-foreground leading-relaxed bg-background p-3 rounded-md border border-border/40 font-mono">
-                        {item.selectionRationale}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
