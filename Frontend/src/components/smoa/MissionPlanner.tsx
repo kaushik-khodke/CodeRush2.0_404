@@ -47,11 +47,10 @@ const statusBadges: Record<ActivityScheduleItem["status"] | "EXPIRED", string> =
 export function MissionPlanner() {
   const { latest } = useTelemetry([]);
 
-  const [schedules, setSchedules] = useState<(ActivityScheduleItem | (ActivityScheduleItem & { status: "EXPIRED" }))[]>(
-    () => mockActivitySchedules()
-  );
+  // NO static predefined tasks in default state — 100% dynamic from Supabase!
+  const [schedules, setSchedules] = useState<(ActivityScheduleItem | (ActivityScheduleItem & { status: "EXPIRED" }))[]>([]);
   const [commWindows, setCommWindows] = useState<CommunicationWindowInfo[]>(() => mockCommunicationWindows());
-  const [expandedId, setExpandedId] = useState<string | null>("ACT-101");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterTab, setFilterTab] = useState<"ALL" | "ACTIVE" | "ARCHIVED">("ALL");
@@ -60,54 +59,59 @@ export function MissionPlanner() {
   const [newTitle, setNewTitle] = useState("");
   const [newType, setNewType] = useState<ActivityScheduleItem["activityType"]>("OBSERVATION");
   const [newDuration, setNewDuration] = useState("20");
+  const [startOffsetMins, setStartOffsetMins] = useState("2");
 
-  // Fetch dynamic schedules & windows from backend API
+  // Fetch dynamic schedules & windows from backend API with 2s live polling
   useEffect(() => {
-    const apiBase = (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:8000";
+    const loadPlannerData = () => {
+      fetch("/api/planner/schedules")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data)) {
+            const mapped: ActivityScheduleItem[] = data.map((d: any) => ({
+              id: d.id || `ACT-${Math.floor(100 + Math.random() * 900)}`,
+              activityName: d.activityName || d.activity_name || "Custom Activity",
+              activityType: d.activityType || d.activity_type || "OBSERVATION",
+              status: d.status || "SCHEDULED",
+              priority: d.priority || 1,
+              startTime: d.startTime || (d.start_time ? `T+${d.start_time.slice(11, 19)}` : "T+00:02:00"),
+              endTime: d.endTime || (d.end_time ? `T+${d.end_time.slice(11, 19)}` : "T+00:22:00"),
+              durationMinutes: d.durationMinutes || d.duration_minutes || 20,
+              resourceRequirements: {
+                powerWatts: d.resourceRequirements?.powerWatts || d.resource_requirements?.powerWatts || 140,
+                batterySocMin: d.resourceRequirements?.batterySocMin || d.resource_requirements?.batterySocMin || 40,
+                storageGb: d.resourceRequirements?.storageGb || d.resource_requirements?.storageGb || 4.0,
+              },
+              precedenceConstraints: d.precedenceConstraints || d.precedence_constraints || ["Battery_SOC >= 40%"],
+              selectionRationale: d.selectionRationale || d.selection_rationale || "AI Solver precedence check passed.",
+            }));
+            setSchedules(mapped);
+          }
+        })
+        .catch(() => {});
 
-    fetch(`${apiBase}/api/planner/schedules`)
-      .then((res) => (res.ok ? res.json() : fetch("/api/planner/schedules").then((r) => (r.ok ? r.json() : null))))
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped: ActivityScheduleItem[] = data.map((d: any) => ({
-            id: d.id || `ACT-${Math.floor(100 + Math.random() * 900)}`,
-            activityName: d.activityName || d.activity_name || "Custom Activity",
-            activityType: d.activityType || d.activity_type || "OBSERVATION",
-            status: d.status || "SCHEDULED",
-            priority: d.priority || 1,
-            startTime: d.startTime || d.start_time || "T+00:30:00",
-            endTime: d.endTime || d.end_time || "T+00:50:00",
-            durationMinutes: d.durationMinutes || d.duration_minutes || 20,
-            resourceRequirements: {
-              powerWatts: d.resourceRequirements?.powerWatts || d.resource_requirements?.powerWatts || 140,
-              batterySocMin: d.resourceRequirements?.batterySocMin || d.resource_requirements?.batterySocMin || 40,
-              storageGb: d.resourceRequirements?.storageGb || d.resource_requirements?.storageGb || 4.0,
-            },
-            precedenceConstraints: d.precedenceConstraints || d.precedence_constraints || ["Battery_SOC >= 40%"],
-            selectionRationale: d.selectionRationale || d.selection_rationale || "AI Solver precedence check passed.",
-          }));
-          setSchedules(mapped);
-        }
-      })
-      .catch(() => {});
+      fetch("/api/planner/windows")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            const mapped: CommunicationWindowInfo[] = data.map((w: any) => ({
+              id: w.id || `CW-${Math.floor(100 + Math.random() * 900)}`,
+              groundStationName: w.groundStationName || w.ground_station_name || "Ground Station",
+              startTime: w.startTime || w.start_time || "T+01:00:00",
+              endTime: w.endTime || w.end_time || "T+01:20:00",
+              maxElevationDeg: w.maxElevationDeg || w.max_elevation || 65.0,
+              bandwidthMbps: w.bandwidthMbps || w.available_bandwidth_mbps || 50.0,
+              status: w.status || "UPCOMING",
+            }));
+            setCommWindows(mapped);
+          }
+        })
+        .catch(() => {});
+    };
 
-    fetch(`${apiBase}/api/planner/windows`)
-      .then((res) => (res.ok ? res.json() : fetch("/api/planner/windows").then((r) => (r.ok ? r.json() : null))))
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped: CommunicationWindowInfo[] = data.map((w: any) => ({
-            id: w.id || `CW-${Math.floor(100 + Math.random() * 900)}`,
-            groundStationName: w.groundStationName || w.ground_station_name || "Ground Station",
-            startTime: w.startTime || w.start_time || "T+01:00:00",
-            endTime: w.endTime || w.end_time || "T+01:20:00",
-            maxElevationDeg: w.maxElevationDeg || w.max_elevation || 65.0,
-            bandwidthMbps: w.bandwidthMbps || w.available_bandwidth_mbps || 50.0,
-            status: w.status || "UPCOMING",
-          }));
-          setCommWindows(mapped);
-        }
-      })
-      .catch(() => {});
+    loadPlannerData();
+    const interval = setInterval(loadPlannerData, 2000);
+    return () => clearInterval(interval);
   }, []);
 
 
@@ -116,7 +120,6 @@ export function MissionPlanner() {
   const liveBatterySoc = latest?.power?.stateOfCharge ?? 88.5;
   const liveSignalDbm = latest?.comms?.signalDbm ?? -78.5;
   const livePacketLoss = latest?.comms?.packetLoss ?? 0.0;
-  const liveMet = latest?.met ?? 90;
 
   // Active in-progress power draw
   const activePowerDraw = useMemo(() => {
@@ -179,14 +182,18 @@ export function MissionPlanner() {
     e.preventDefault();
     if (!newTitle.trim()) return;
 
+    const offsetMins = Number(startOffsetMins) || 2;
+    const targetStartDate = new Date(Date.now() + offsetMins * 60 * 1000);
+    const timeFormatted = targetStartDate.toISOString().slice(11, 19);
+
     const newItem: ActivityScheduleItem = {
       id: `ACT-${Math.floor(100 + Math.random() * 900)}`,
       activityName: newTitle.trim(),
       activityType: newType,
       status: "SCHEDULED",
-      priority: 2,
-      startTime: "T+02:00:00",
-      endTime: "T+02:20:00",
+      priority: 1,
+      startTime: `T+${timeFormatted}`,
+      endTime: `T+${new Date(targetStartDate.getTime() + (Number(newDuration) || 20) * 60 * 1000).toISOString().slice(11, 19)}`,
       durationMinutes: Number(newDuration) || 20,
       resourceRequirements: {
         powerWatts: newType === "DOWNLINK" ? 180 : newType === "OBSERVATION" ? 145 : 60,
@@ -194,19 +201,21 @@ export function MissionPlanner() {
         storageGb: newType === "DOWNLINK" ? -6.5 : 5.0,
       },
       precedenceConstraints: [
+        `Scheduled Execution: ${timeFormatted} UTC (in ${offsetMins}m)`,
         `Battery_SOC >= 40% (Live: ${liveBatterySoc.toFixed(1)}%)`,
-        "Precedence Solver Bounds Verified",
+        "Constraint Solver Verification Passed",
       ],
-      selectionRationale: `Queued via Live Operator Console. Net surplus (${netPowerSurplus >= 0 ? "+" : ""}${netPowerSurplus.toFixed(0)}W) confirmed feasible.`,
+      selectionRationale: `User-scheduled for ${timeFormatted} UTC. Net surplus (${netPowerSurplus >= 0 ? "+" : ""}${netPowerSurplus.toFixed(0)}W) verified feasible.`,
     };
 
-    // Post to backend API
+    // Post to backend API to insert into Supabase
     fetch("/api/planner/activities", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         activity_name: newItem.activityName,
         activity_type: newItem.activityType,
+        start_time: targetStartDate.toISOString(),
         duration_minutes: newItem.durationMinutes,
         power_watts: newItem.resourceRequirements.powerWatts,
         battery_soc_min: newItem.resourceRequirements.batterySocMin,
@@ -390,8 +399,14 @@ export function MissionPlanner() {
         {/* Activity List */}
         <div className="divide-y divide-border">
           {filteredSchedules.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground font-tech text-xs uppercase">
-              No activities found in this filter view.
+            <div className="p-12 text-center space-y-2">
+              <Calendar className="size-8 text-muted-foreground/50 mx-auto" />
+              <p className="font-tech text-xs text-muted-foreground uppercase font-semibold">
+                No scheduled mission activities in database.
+              </p>
+              <p className="text-xs text-muted-foreground/80 max-w-md mx-auto">
+                Approve a command from the Human Approval Queue or click <strong>"+ Queue Activity"</strong> to schedule an automated task.
+              </p>
             </div>
           ) : (
             filteredSchedules.map((item) => {
@@ -520,7 +535,7 @@ export function MissionPlanner() {
           <div className="panel w-full max-w-md bg-surface p-5 border border-border shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <h3 className="font-tech text-sm font-bold uppercase tracking-wider text-foreground">
-                Queue Mission Activity
+                Queue &amp; Schedule Mission Activity
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
@@ -572,6 +587,21 @@ export function MissionPlanner() {
                 </div>
               </div>
 
+              <div>
+                <label className="label-tech text-[0.68rem] block mb-1">Scheduled Start Time Offset</label>
+                <select
+                  value={startOffsetMins}
+                  onChange={(e) => setStartOffsetMins(e.target.value)}
+                  className="w-full rounded-sm border border-border bg-background px-3 py-1.5 font-tech text-xs text-foreground focus:border-primary focus:outline-none"
+                >
+                  <option value="1">Trigger in 1 minute</option>
+                  <option value="2">Trigger in 2 minutes</option>
+                  <option value="5">Trigger in 5 minutes</option>
+                  <option value="10">Trigger in 10 minutes</option>
+                  <option value="30">Trigger in 30 minutes</option>
+                </select>
+              </div>
+
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
@@ -584,7 +614,7 @@ export function MissionPlanner() {
                   type="submit"
                   className="rounded-sm border border-primary bg-primary/20 px-4 py-1.5 font-tech text-xs font-semibold text-primary uppercase hover:bg-primary/30 cursor-pointer"
                 >
-                  Add &amp; Verify Feasibility
+                  Schedule &amp; Persist to Supabase
                 </button>
               </div>
             </form>

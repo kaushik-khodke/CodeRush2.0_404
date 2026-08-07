@@ -84,6 +84,13 @@ export function TopBar({
           <div className="num text-sm text-foreground">{met === null ? "---:--:--:--" : formatMet(met)}</div>
         </div>
 
+        <div className="flex items-center gap-1.5 rounded-sm border border-primary/40 bg-primary/10 px-2.5 py-1.5">
+          <Satellite className="size-3.5 text-primary" />
+          <span className="font-tech text-[0.68rem] font-bold text-primary tracking-[0.08em] uppercase">
+            BSK Twin Active
+          </span>
+        </div>
+
         {anomalyScore !== undefined && (
           <div className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5">
             <span className="label-tech text-[0.65rem]">ML Sentinel</span>

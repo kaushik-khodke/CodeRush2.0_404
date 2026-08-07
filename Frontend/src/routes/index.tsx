@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, WifiOff } from "lucide-react";
@@ -34,10 +35,10 @@ export const Route = createFileRoute("/")({
 
 function OperationsConsole() {
   const [faults, setFaults] = useState<FaultInjection[]>([]);
-  const { status, history, latest, lastError } = useTelemetry(faults);
   const [agents] = useState(() => mockAgents());
   const [selectedAgentId, setSelectedAgentId] = useState("telemetry_monitor");
   const [agentSidebarOpen, setAgentSidebarOpen] = useState(false);
+  const [telemetrySource, setTelemetrySource] = useState<"simulator" | "digital-twin">("simulator");
 
   const [events, setEvents] = useState<AnomalyEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -47,6 +48,8 @@ function OperationsConsole() {
   const [commandsLoading, setCommandsLoading] = useState(true);
   const [commandsError, setCommandsError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const { status, history, latest, lastError } = useTelemetry(faults, telemetrySource);
 
   const loadEvents = useCallback((silent = false) => {
     if (!silent) setEventsLoading(true);
@@ -77,13 +80,33 @@ function OperationsConsole() {
     return () => clearInterval(interval);
   }, [loadEvents, loadCommands]);
 
-  const onDecide = useCallback((id: string, decision: "approve" | "reject") => {
-    setBusyId(id);
-    authorizeCommand(id, decision)
-      .then((res) => setCommands((prev) => prev.map((c) => (c.id === id ? { ...c, state: res.state } : c))))
-      .catch(() => setCommandsError(`Authorization for ${id} failed to transmit. Command left pending.`))
-      .finally(() => setBusyId(null));
-  }, []);
+  const onDecide = useCallback(
+    (id: string, decision: "approve" | "reject") => {
+      setBusyId(id);
+      const targetCmd = commands.find((c) => c.id === id);
+      authorizeCommand(id, decision)
+        .then(() => {
+          setCommands((prev) =>
+            prev.filter(
+              (c) =>
+                c.id !== id &&
+                c.command !== targetCmd?.command &&
+                c.subsystem !== targetCmd?.subsystem
+            )
+          );
+          if (targetCmd) {
+            setEvents((prev) =>
+              prev.filter((e) => e.id !== targetCmd.linkedEventId && e.subsystem !== targetCmd.subsystem)
+            );
+          }
+          loadEvents(true);
+          loadCommands(true);
+        })
+        .catch(() => setCommandsError(`Authorization for ${id} failed to transmit. Command left pending.`))
+        .finally(() => setBusyId(null));
+    },
+    [commands, loadEvents, loadCommands]
+  );
 
   const anomalyCount = useMemo(() => events.filter((e) => e.severity !== "info").length, [events]);
   const criticalCount = useMemo(() => events.filter((e) => e.severity === "critical").length, [events]);
@@ -157,7 +180,7 @@ function OperationsConsole() {
       )}
 
       {/* Main Spacious Telemetry, 3D Twin & Event Grid */}
-      <main className="grid min-h-[520px] flex-1 grid-cols-1 lg:grid-cols-[22rem_minmax(0,1fr)_24rem] gap-4 p-4">
+      <main className="grid flex-1 grid-cols-1 lg:grid-cols-[22rem_minmax(0,1fr)_24rem] gap-4 p-4 items-start">
         <TelemetryPanel frames={history} status={status} />
         <AttitudeViewer latest={latest} status={status} />
         <EventFeed events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} />
@@ -178,7 +201,17 @@ function OperationsConsole() {
       <div className="flex items-center gap-3 border-t border-border bg-surface px-4 py-2 mt-auto">
         <span className="label-tech">Console UTC {latest ? formatClock(latest.t) : "--:--:--"}</span>
         <span className="label-tech">Buffer {history.length}/300 frames</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[0.75rem] text-muted-foreground">Simulation mode</span>
+          <Select value={telemetrySource} onValueChange={(value) => setTelemetrySource(value as "simulator" | "digital-twin")}>
+            <SelectTrigger className="h-8 w-[170px] border-border bg-background text-[0.75rem]">
+              <SelectValue placeholder="Telemetry source" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="simulator">Simulator</SelectItem>
+              <SelectItem value="digital-twin">Digital Twin</SelectItem>
+            </SelectContent>
+          </Select>
           <FaultInjectionPanel faults={faults} onChange={setFaults} />
         </div>
       </div>

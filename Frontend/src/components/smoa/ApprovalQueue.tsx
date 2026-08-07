@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, CircleAlert, Loader2, ShieldAlert, ShieldCheck, X } from "lucide-react";
+import { Check, CircleAlert, Eye, Loader2, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { timeAgo } from "@/lib/smoa/api";
 import type { PendingCommand } from "@/lib/smoa/types";
+import { SimulationPreviewModal } from "@/components/smoa/SimulationPreviewModal";
 import { cn } from "@/lib/utils";
 
 function ConstraintBlock({ command }: { command: PendingCommand }) {
@@ -47,10 +48,12 @@ function ConstraintBlock({ command }: { command: PendingCommand }) {
 function CommandCard({
   command,
   onDecide,
+  onPreview,
   busyId,
 }: {
   command: PendingCommand;
   onDecide: (id: string, decision: "approve" | "reject") => void;
+  onPreview: (command: PendingCommand) => void;
   busyId: string | null;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -83,6 +86,14 @@ function CommandCard({
       <p className="text-[0.78rem] leading-snug text-muted-foreground">{command.summary}</p>
 
       <ConstraintBlock command={command} />
+
+      <button
+        onClick={() => onPreview(command)}
+        className="w-full flex items-center justify-center gap-1.5 rounded-sm border border-primary/40 bg-primary/10 py-1 font-tech text-[0.65rem] font-semibold text-primary uppercase hover:bg-primary/20 transition-colors cursor-pointer"
+      >
+        <Eye className="size-3" />
+        Preview in Digital Twin Simulator
+      </button>
 
       <AnimatePresence mode="wait" initial={false}>
         {confirming ? (
@@ -176,6 +187,7 @@ export function ApprovalQueue({
   onDecide: (id: string, decision: "approve" | "reject") => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [previewCommand, setPreviewCommand] = useState<PendingCommand | null>(null);
   const pending = commands.filter((c) => c.state === "pending");
 
   return (
@@ -228,15 +240,29 @@ export function ApprovalQueue({
               {!loading &&
                 !error &&
                 pending.map((c) => (
-                  <CommandCard key={c.id} command={c} onDecide={onDecide} busyId={busyId} />
+                  <CommandCard
+                    key={c.id}
+                    command={c}
+                    onDecide={onDecide}
+                    onPreview={setPreviewCommand}
+                    busyId={busyId}
+                  />
                 ))}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Digital Twin Command Simulation Preview Modal */}
+      {previewCommand && (
+        <SimulationPreviewModal
+          commandItem={previewCommand}
+          onClose={() => setPreviewCommand(null)}
+          onAuthorize={onDecide}
+        />
+      )}
     </section>
   );
 }
 
 export default ApprovalQueue;
-
