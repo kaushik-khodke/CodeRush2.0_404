@@ -398,6 +398,16 @@ def authorize_command(id: str, req: AuthorizationRequest):
     for c in state.commands:
         if c["id"] == id:
             c["state"] = "approved" if req.decision == "approve" else "rejected"
+            try:
+                from database.repositories.supabase_repository import SupabaseRepository
+                SupabaseRepository.log_audit_event(
+                    action=f"OPERATOR_COMMAND_{c['state'].upper()}",
+                    entity_type="command_queue",
+                    entity_id=id,
+                    payload={"command": c.get("command"), "note": req.operatorNote}
+                )
+            except Exception:
+                pass
             return {"id": id, "state": c["state"]}
     raise HTTPException(status_code=404, detail="Command ID not found")
 

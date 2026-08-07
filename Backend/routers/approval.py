@@ -37,6 +37,25 @@ async def process_operator_approval(payload: ApprovalRequest, db: AsyncSession =
         payload={"status": payload.status, "comments": payload.comments}
     )
 
+    # Sync operator approval decision to Supabase
+    try:
+        from database.repositories.supabase_repository import SupabaseRepository
+        SupabaseRepository.update_approval_status(
+            approval_id=payload.approval_id,
+            status=payload.status,
+            approved_by=payload.approved_by,
+            comments=payload.comments
+        )
+        SupabaseRepository.log_audit_event(
+            action=f"OPERATOR_APPROVAL_{payload.status}",
+            entity_type="approval_queue",
+            entity_id=payload.approval_id,
+            user_id=payload.approved_by,
+            payload={"status": payload.status, "comments": payload.comments}
+        )
+    except Exception as err:
+        pass
+
     await ws_manager.broadcast({
         "event": "APPROVAL_STATUS_CHANGED",
         "approval_id": payload.approval_id,

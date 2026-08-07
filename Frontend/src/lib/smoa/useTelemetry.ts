@@ -96,11 +96,64 @@ export function useTelemetry(
 
     connectWebSocket();
 
+    // Supabase Realtime Fallback / Dual Sync
+    let supabaseChannel: any = null;
+    try {
+      import("../supabaseClient").then(({ supabase }) => {
+        supabaseChannel = supabase
+          .channel("telemetry-realtime")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "telemetry_data" },
+            (payload) => {
+              if (payload.new) {
+                const row = payload.new;
+                // Convert database row into telemetry frame format if needed
+                const frame: TelemetryFrame = {
+                  met: row.met || Math.floor(Date.now() / 1000),
+                  t: new Date(row.timestamp || Date.now()).getTime(),
+                  orbitAngle: row.Orbital_Phase || 0,
+                  eclipse: row.Eclipse_Status === 1,
+                  power: {
+                    busVoltage: row.Battery_Voltage || 28.0,
+                    stateOfCharge: row.Battery_SOC || 80.0,
+                    arrayPower: row.Power_Generation || 400.0,
+                  },
+                  thermal: {
+                    batteryTemp: row.Battery_Temperature || 20.0,
+                    payloadTemp: row.Payload_Temperature || 15.0,
+                    radiatorTemp: row.External_Temp || -30.0,
+                  },
+                  adcs: {
+                    roll: row.Roll || 0,
+                    pitch: row.Pitch || 0,
+                    yaw: row.Yaw || 0,
+                    bodyRate: row.Angular_Velocity || 0,
+                    wheelRpm: row.Reaction_Wheel_Speed || 2500,
+                  },
+                  comms: {
+                    signalDbm: row.Signal_Strength || -80,
+                    packetLoss: row.Packet_Loss || 0,
+                    rttSeconds: (row.Latency || 100) / 1000,
+                  },
+                  anomalyScore: 0.1,
+                };
+                push(frame);
+              }
+            }
+          )
+          .subscribe();
+      }).catch(() => {});
+    } catch (e) {}
+
     return () => {
       cancelled = true;
       if (socket) {
         socket.onclose = null;
         socket.close();
+      }
+      if (supabaseChannel) {
+        supabaseChannel.unsubscribe();
       }
     };
   }, [push, onAnomalyEvent, onPendingCommand]);

@@ -31,8 +31,7 @@ export const Route = createFileRoute("/")({
 });
 
 function OperationsConsole() {
-  const [faults, setFaults] = useState<FaultInjection[]>([]);
-  const { status, history, latest, lastError } = useTelemetry(faults);
+  const [faults] = useState<FaultInjection[]>([]);
   const [agents] = useState(() => mockAgents());
   const [selectedAgentId, setSelectedAgentId] = useState("telemetry_monitor");
 

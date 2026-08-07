@@ -213,3 +213,45 @@ class FaultInjection(Base):
     active = Column(Boolean, default=True, nullable=False)
     injected_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     cleared_at = Column(DateTime, nullable=True)
+
+class ActivitySchedule(Base):
+    __tablename__ = "activity_schedules"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    mission_id = Column(String(36), ForeignKey("mission_plan.id", ondelete="CASCADE"), nullable=True)
+    activity_name = Column(String(255), nullable=False)
+    activity_type = Column(String(50), nullable=False)
+    status = Column(String(50), default="SCHEDULED", nullable=False)
+    priority = Column(Integer, default=1, nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    resource_requirements = Column(JSON, nullable=False, default=dict)
+    precedence_constraints = Column(JSON, nullable=False, default=list)
+    selection_rationale = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class CommunicationWindow(Base):
+    __tablename__ = "communication_windows"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    ground_station_name = Column(String(100), nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    max_elevation = Column(Float, nullable=True)
+    available_bandwidth_mbps = Column(Float, default=50.0, nullable=False)
+    status = Column(String(50), default="UPCOMING", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class SimulationReplay(Base):
+    __tablename__ = "simulation_replays"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    session_name = Column(String(255), nullable=False)
+    start_time = Column(DateTime, default=datetime.utcnow, nullable=False)
+    end_time = Column(DateTime, nullable=True)
+    telemetry_snapshot_ids = Column(JSON, nullable=False, default=list)
+    automated_recommendations = Column(JSON, nullable=False, default=list)
+    operator_decisions = Column(JSON, nullable=False, default=list)
+    simulated_outcomes = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+

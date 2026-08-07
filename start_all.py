@@ -81,8 +81,13 @@ def main():
     log("BACKEND", "Starting FastAPI Server on http://localhost:8000...", "32")
     backend_env = os.environ.copy()
     backend_env["PYTHONPATH"] = str(BACKEND_DIR) + ";" + str(ROOT_DIR)
+
+    venv_python = ROOT_DIR / ".venv" / ("Scripts" if sys.platform == "win32" else "bin") / ("python.exe" if sys.platform == "win32" else "python")
+    python_exe = str(venv_python) if venv_python.exists() else sys.executable
+    log("BACKEND", f"Using Python executable: {python_exe}", "32")
+
     p_backend = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+        [python_exe, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
         cwd=BACKEND_DIR,
         env=backend_env,
         shell=True

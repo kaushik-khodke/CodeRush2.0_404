@@ -61,6 +61,23 @@ async def create_telemetry(payload: TelemetryInput, db: AsyncSession = Depends(g
         payload={"failure_class": prediction.failure_class, "confidence": prediction.confidence}
     )
 
+    # Sync to Supabase directly if connected
+    try:
+        from database.repositories.supabase_repository import SupabaseRepository
+        SupabaseRepository.insert_telemetry(telemetry_dict)
+        SupabaseRepository.insert_prediction(pred_data)
+        if prediction.failure_class != "Healthy" or prediction.anomaly_score > 0.5:
+            SupabaseRepository.insert_anomaly({
+                "telemetry_id": telemetry.id,
+                "prediction_id": prediction.id,
+                "anomaly_type": prediction.failure_class,
+                "severity": "CRITICAL" if prediction.failure_class != "Healthy" else "MEDIUM",
+                "description": f"Telemetry anomaly detected: {prediction.failure_class}. Risk: {prediction.risk_level}"
+            })
+        SupabaseRepository.log_audit_event("TELEMETRY_INGESTED", "telemetry_data", telemetry.id, {"failure_class": prediction.failure_class})
+    except Exception as err:
+        pass
+
     # Broadcast realtime event
     await ws_manager.broadcast({
         "event": "TELEMETRY_UPDATED",

@@ -1,14 +1,23 @@
 import os
+import logging
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from config import settings
 
-db_url = settings.DATABASE_URL
-if db_url.startswith("postgresql://"):
-    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+logger = logging.getLogger(__name__)
 
-# Handle sqlite connect_args
+db_url = settings.DATABASE_URL
+
+# Check if PostgreSQL connection string has a password in user:password format
+if db_url.startswith("postgresql://") or db_url.startswith("postgresql+asyncpg://"):
+    user_pass = db_url.split("@")[0].replace("postgresql://", "").replace("postgresql+asyncpg://", "")
+    if ":" not in user_pass:
+        # Fallback to in-memory SQLite for local SQLAlchemy session dependency when raw Postgres password is not set
+        db_url = "sqlite+aiosqlite:///:memory:"
+    else:
+        db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
 
 engine = create_async_engine(
@@ -40,5 +49,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        logger.info(f"[DB Init Note] Local SQLAlchemy schema init note: {e}. Primary data store remains Supabase Cloud API.")

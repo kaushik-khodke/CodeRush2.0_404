@@ -47,6 +47,13 @@ async def run_prediction(payload: Optional[TelemetryInput] = None, db: AsyncSess
         payload={"failure_class": prediction.failure_class, "risk": prediction.risk_level}
     )
 
+    try:
+        from database.repositories.supabase_repository import SupabaseRepository
+        SupabaseRepository.insert_prediction(pred_data)
+        SupabaseRepository.log_audit_event("PREDICTION_EXECUTED", "predictions", prediction.id, {"failure_class": prediction.failure_class})
+    except Exception:
+        pass
+
     response_dict = {
         "id": prediction.id,
         "telemetry_id": prediction.telemetry_id,

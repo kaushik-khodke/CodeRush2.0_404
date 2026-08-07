@@ -383,37 +383,48 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
 
     wobble = lambda period, phase=0.0: math.sin((t_sec / period) * math.pi * 2 + phase)
 
-    # Base telemetry values + Direct custom offsets from fine-tuning sliders
-    v_offset = custom.get("voltage_offset", 0.0)
-    t_offset = custom.get("temp_offset", 0.0) + custom.get("cpu_temp_offset", 0.0)
-    rpm_offset = custom.get("wheel_rpm_offset", 0.0)
-    loss_offset = custom.get("packet_loss_offset", 0.0)
+    # Extract 52 custom offsets by canonical key or legacy alias
+    v_offset = custom.get("Battery_Voltage", custom.get("voltage_offset", 0.0))
+    t_cpu_offset = custom.get("CPU_Temperature", custom.get("cpu_temp_offset", custom.get("temp_offset", 0.0)))
+    t_batt_offset = custom.get("Battery_Temperature", custom.get("temp_offset", 0.0))
+    rpm_offset = custom.get("Reaction_Wheel_Speed", custom.get("wheel_rpm_offset", 0.0))
+    loss_offset = custom.get("Packet_Loss", custom.get("packet_loss_offset", 0.0))
+    press_offset = custom.get("Fuel_Pressure", custom.get("fuel_pressure_offset", 0.0))
+    fuel_offset = custom.get("Fuel_Level", custom.get("fuel_level_offset", 0.0))
+    roll_offset = custom.get("Roll", custom.get("roll_offset", 0.0))
+    pitch_offset = custom.get("Pitch", 0.0)
+    yaw_offset = custom.get("Yaw", 0.0)
+    ang_vel_offset = custom.get("Angular_Velocity", custom.get("angular_vel_offset", 0.0))
+    sig_offset = custom.get("Signal_Strength", custom.get("signal_offset", 0.0))
+    lat_offset = custom.get("Latency", custom.get("latency_offset", 0.0))
+    thr_temp_offset = custom.get("Thruster_Temperature", custom.get("thruster_temp_offset", 0.0))
+    cpu_usage_offset = custom.get("CPU_Usage", custom.get("cpu_usage_offset", 0.0))
 
     batt_volts = 28.2 + wobble(29) * 0.4 + v_offset
-    batt_curr = 4.8 if not eclipse else -2.1
-    soc = max(5.0, min(100.0, soc_val + (-0.02 if eclipse else 0.03)))
-    batt_temp = 24.1 + wobble(211) * 1.5 + (1.5 if not eclipse else -3.0) + t_offset
+    batt_curr = (4.8 if not eclipse else -2.1) + custom.get("Battery_Current", 0.0)
+    soc = max(5.0, min(100.0, soc_val + (-0.02 if eclipse else 0.03) + custom.get("Battery_SOC", 0.0)))
+    batt_temp = 24.1 + wobble(211) * 1.5 + (1.5 if not eclipse else -3.0) + t_batt_offset
     
-    cpu_temp = 43.2 + wobble(150) * 2.0 + t_offset
-    payload_temp = 29.5 + wobble(167) * 1.8 + t_offset * 0.5
-    radiator_temp = 18.2 + wobble(233) * 3.0
+    cpu_temp = 43.2 + wobble(150) * 2.0 + t_cpu_offset
+    payload_temp = 29.5 + wobble(167) * 1.8 + custom.get("Payload_Temperature", t_cpu_offset * 0.5)
+    radiator_temp = 18.2 + wobble(233) * 3.0 + custom.get("System_Temp", 0.0)
     
     wheel_rpm = 2480.0 + wobble(89) * 150.0 + rpm_offset
-    roll = 0.2 + wobble(97) * 2.0 + custom.get("roll_offset", 0.0)
-    pitch = -0.1 + wobble(131, 0.8) * 1.5
-    yaw = ((t_sec / 3.0) % 360.0) - 180.0
-    angular_vel = 0.04 + abs(wobble(61)) * 0.02 + custom.get("angular_vel_offset", 0.0)
+    roll = 0.2 + wobble(97) * 2.0 + roll_offset
+    pitch = -0.1 + wobble(131, 0.8) * 1.5 + pitch_offset
+    yaw = (((t_sec / 3.0) % 360.0) - 180.0) + yaw_offset
+    angular_vel = 0.04 + abs(wobble(61)) * 0.02 + ang_vel_offset
 
-    signal_dbm = -78.5 + wobble(73) * 2.0 + custom.get("signal_offset", 0.0)
+    signal_dbm = -78.5 + wobble(73) * 2.0 + sig_offset
     packet_loss = max(0.0, 0.1 + wobble(41) * 0.2 + loss_offset)
-    latency = 115.0 + wobble(311) * 10.0 + custom.get("latency_offset", 0.0)
+    latency = 115.0 + wobble(311) * 10.0 + lat_offset
 
-    fuel_level = max(0.0, 85.0 - (t_sec - 128400) * 0.001) + custom.get("fuel_level_offset", 0.0)
-    fuel_pressure = 152.0 + custom.get("fuel_pressure_offset", 0.0)
-    thruster_temp = 39.5 + custom.get("thruster_temp_offset", 0.0)
+    fuel_level = max(0.0, 85.0 - (t_sec - 128400) * 0.001) + fuel_offset
+    fuel_pressure = 152.0 + press_offset
+    thruster_temp = 39.5 + thr_temp_offset
 
-    cpu_usage = 34.2 + custom.get("cpu_usage_offset", 0.0)
-    array_power = 410.0 + wobble(53) * 18.0 if not eclipse else 0.0
+    cpu_usage = 34.2 + cpu_usage_offset
+    array_power = (410.0 + wobble(53) * 18.0 if not eclipse else 0.0) + custom.get("Power_Generation", 0.0)
     
     if anomaly_mode == "power_droop":
         batt_volts = max(18.2, 28.2 - 9.7 + wobble(11) * 0.8) + v_offset
@@ -426,7 +437,7 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
         roll = 1.39 + wobble(15) * 14.0
         pitch = -1.30 + wobble(19) * 8.0
     elif anomaly_mode == "thermal_overheat":
-        cpu_temp = 78.4 + wobble(45) * 5.0 + t_offset
+        cpu_temp = 78.4 + wobble(45) * 5.0 + t_cpu_offset
         payload_temp = 68.2 + wobble(30) * 3.0
         radiator_temp = 53.2 + wobble(40) * 4.0
         cpu_usage = 89.5
@@ -435,8 +446,8 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
         packet_loss = min(95.0, 38.5 + wobble(20) * 15.0 + loss_offset)
         latency = 480.0
     elif anomaly_mode == "thruster_leak":
-        fuel_pressure = max(40.0, 152.0 - (t_sec % 100) * 1.1)
-        thruster_temp = 125.0 + wobble(20) * 10.0
+        fuel_pressure = max(40.0, 152.0 - (t_sec % 100) * 1.1) + press_offset
+        thruster_temp = 125.0 + wobble(20) * 10.0 + thr_temp_offset
         fuel_level = max(2.0, fuel_level - 0.4)
     elif anomaly_mode == "sensor_drift":
         batt_volts -= (t_sec % 60) * 0.12
@@ -450,24 +461,28 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
         wheel_rpm = 5443.0
         fuel_pressure = 25.0
 
-    # Dynamic ML Anomaly Score based on real parameter excursions
+    # Dynamic ML Anomaly Score evaluation across 52 parameters
     is_custom_anomaly = False
     score = 0.08
     if anomaly_mode != "nominal":
         score = 0.96
     else:
-        # Evaluate parameter safety envelope
-        if batt_volts < 22.0 or batt_volts > 33.5:
-            score = max(score, 0.91)
-            is_custom_anomaly = True
-        if cpu_temp > 68.0 or batt_temp > 65.0:
-            score = max(score, 0.88)
-            is_custom_anomaly = True
-        if wheel_rpm > 4200.0:
-            score = max(score, 0.82)
-            is_custom_anomaly = True
-        if packet_loss > 20.0:
-            score = max(score, 0.79)
+        # Check active custom offset limits across 52 parameters
+        excursions = 0
+        if batt_volts < 22.0 or batt_volts > 33.5: excursions += 1
+        if cpu_temp > 68.0 or batt_temp > 65.0: excursions += 1
+        if wheel_rpm > 4200.0: excursions += 1
+        if packet_loss > 20.0: excursions += 1
+        if fuel_pressure < 100.0: excursions += 1
+        if abs(roll) > 15.0 or abs(pitch) > 15.0: excursions += 1
+        if signal_dbm < -98.0: excursions += 1
+        if cpu_usage > 85.0: excursions += 1
+        if thruster_temp > 90.0: excursions += 1
+        
+        # Count non-zero custom parameters
+        non_zero_customs = sum(1 for k, v in custom.items() if abs(v) > 0.0001)
+        if excursions > 0 or non_zero_customs >= 3:
+            score = max(score, 0.75 + min(0.20, (excursions * 0.08) + (non_zero_customs * 0.02)))
             is_custom_anomaly = True
 
     frontend_frame = {
@@ -514,6 +529,67 @@ async def seeding_loop():
         state.history_buffer.append(frame)
         if len(state.history_buffer) > 300:
             state.history_buffer = state.history_buffer[-300:]
+
+        # Sync telemetry directly to Supabase table
+        try:
+            from database.repositories.supabase_repository import SupabaseRepository
+            db_dict = {
+                "Battery_Voltage": frame["power"]["busVoltage"],
+                "Battery_Current": 4.8 if not frame["eclipse"] else -2.1,
+                "Battery_SOC": frame["power"]["stateOfCharge"],
+                "Battery_Temperature": frame["thermal"]["batteryTemp"],
+                "Solar_Voltage": 35.0 if not frame["eclipse"] else 0.0,
+                "Solar_Current": 12.0 if not frame["eclipse"] else 0.0,
+                "Power_Load": 280.0,
+                "Power_Generation": frame["power"]["arrayPower"],
+                "Payload_Temperature": frame["thermal"]["payloadTemp"],
+                "CPU_Temperature": round(43.2 + (frame["thermal"]["batteryTemp"] - 24.1), 2),
+                "Solar_Panel_Temperature": 25.0 if not frame["eclipse"] else -60.0,
+                "System_Temp": frame["thermal"]["radiatorTemp"],
+                "External_Temp": -50.0,
+                "Signal_Strength": frame["comms"]["signalDbm"],
+                "Downlink_Rate": 10.0,
+                "Uplink_Rate": 1.0,
+                "Packet_Loss": frame["comms"]["packetLoss"],
+                "Latency": frame["comms"]["rttSeconds"] * 1000.0,
+                "Communication_Window": 1,
+                "Roll": frame["adcs"]["roll"],
+                "Pitch": frame["adcs"]["pitch"],
+                "Yaw": frame["adcs"]["yaw"],
+                "Angular_Velocity": frame["adcs"]["bodyRate"],
+                "Reaction_Wheel_Speed": frame["adcs"]["wheelRpm"],
+                "Gyroscope_X": 0.001,
+                "Gyroscope_Y": 0.001,
+                "Gyroscope_Z": 0.001,
+                "Magnetometer": 45.0,
+                "Star_Tracker_Status": 1,
+                "Altitude": 525.0,
+                "Velocity": 7.6,
+                "Latitude": 12.0,
+                "Longitude": 45.0,
+                "Orbital_Phase": frame["orbitAngle"],
+                "Eclipse_Status": 1 if frame["eclipse"] else 0,
+                "Fuel_Level": 85.0,
+                "Thruster_Temperature": 39.5,
+                "Thruster_Status": 0,
+                "Fuel_Pressure": 152.0,
+                "Burn_Duration": 0,
+                "Camera_Status": 1,
+                "Instrument_Temperature": 20.0,
+                "Instrument_Power": 80.0,
+                "Data_Collection_Rate": 10.0,
+                "Payload_Mode": 2,
+                "CPU_Usage": 34.2,
+                "RAM_Usage": 50.0,
+                "Storage_Usage": 40.0,
+                "Process_Health": 1,
+                "Software_Version": 2.1,
+                "Mission_Phase": 1,
+                "Observation_Window": 1
+            }
+            SupabaseRepository.insert_telemetry(db_dict)
+        except Exception:
+            pass
 
         await ws_manager.broadcast({
             "type": "TELEMETRY_FRAME",
@@ -587,6 +663,24 @@ async def set_anomaly(req: AnomalyRequest):
         if cmd:
             state.pending_commands.insert(0, cmd)
             
+        try:
+            from database.repositories.supabase_repository import SupabaseRepository
+            SupabaseRepository.insert_anomaly({
+                "anomaly_type": event.get("title", "Telemetry Anomaly"),
+                "severity": event.get("severity", "MEDIUM").upper(),
+                "description": event.get("diagnosis", {}).get("rootCause", "Simulated Anomaly"),
+                "competing_hypotheses": event.get("diagnosis", {}).get("evidence", []),
+                "recommended_procedure": event.get("diagnosis", {}).get("proposedAction", "Review SOP")
+            })
+            if cmd:
+                SupabaseRepository.insert_approval_item({
+                    "recommended_action": cmd.get("summary", cmd.get("command", "Execute Command")),
+                    "command_preview": cmd,
+                    "status": "PENDING"
+                })
+        except Exception:
+            pass
+
         await ws_manager.broadcast({
             "type": "ANOMALY_EVENT",
             "event": event,
@@ -606,25 +700,31 @@ def set_rate(req: RateRequest):
 async def set_custom(req: CustomParamsRequest):
     state.custom_params.update(req.params)
     
-    # Evaluate if custom offset triggers an alert
-    detail = None
-    v_off = state.custom_params.get("voltage_offset", 0.0)
-    t_off = state.custom_params.get("temp_offset", 0.0) + state.custom_params.get("cpu_temp_offset", 0.0)
-    rpm_off = state.custom_params.get("wheel_rpm_offset", 0.0)
-    
-    if v_off < -5.0:
-        detail = f"Bus Voltage depressed by {v_off:.1f} V via sensor offsetter"
-    elif t_off > 20.0:
-        detail = f"Temperature elevated by +{t_off:.1f} °C via sensor offsetter"
-    elif rpm_off > 1500.0:
-        detail = f"Wheel RPM accelerated by +{rpm_off:.0f} RPM via sensor offsetter"
+    # Evaluate if custom offsets trigger an alert card
+    excursions = []
+    for k, val in state.custom_params.items():
+        if abs(val) > 0.0001:
+            excursions.append(f"{k}: {val:+}")
 
     event, cmd = None, None
-    if detail:
+    if excursions:
+        detail = "Manual Custom Offsets Active: " + ", ".join(excursions[:3]) + (f" (+{len(excursions)-3} more)" if len(excursions) > 3 else "")
         event, cmd = create_anomaly_event_and_command("custom_offset", detail)
         state.events.insert(0, event)
         if cmd:
             state.pending_commands.insert(0, cmd)
+
+        try:
+            from database.repositories.supabase_repository import SupabaseRepository
+            SupabaseRepository.insert_anomaly({
+                "anomaly_type": "Custom Sensor Excursion",
+                "severity": "HIGH",
+                "description": detail,
+                "recommended_procedure": "RESET_SENSOR_OFFSETS_TO_ZERO"
+            })
+        except Exception:
+            pass
+
         await ws_manager.broadcast({
             "type": "ANOMALY_EVENT",
             "event": event,
@@ -668,5 +768,15 @@ def authorize_command(id: str, req: AuthRequest):
     for c in state.pending_commands:
         if c.get("id") == id:
             c["state"] = "approved" if req.decision == "approve" else "rejected"
+            try:
+                from database.repositories.supabase_repository import SupabaseRepository
+                SupabaseRepository.log_audit_event(
+                    action=f"OPERATOR_COMMAND_{c['state'].upper()}",
+                    entity_type="command_queue",
+                    entity_id=id,
+                    payload={"command": c.get("command"), "note": req.operatorNote}
+                )
+            except Exception:
+                pass
             return {"id": id, "state": c["state"]}
     return {"id": id, "state": "approved" if req.decision == "approve" else "rejected"}
