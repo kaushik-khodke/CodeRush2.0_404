@@ -25,8 +25,8 @@ export function TopBar({ status, met, anomalyCount, criticalCount }: TopBarProps
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-6 border-b border-border bg-surface px-4">
       <div className="flex items-center gap-3">
-        <div className="flex size-8 items-center justify-center rounded-sm bg-primary/20 text-primary">
-          <Satellite className="size-4" strokeWidth={1.75} />
+        <div className="flex size-10 items-center justify-center overflow-hidden rounded-md border border-primary/30 bg-surface-raised/50 p-1">
+          <img src="/favicon-removebg-preview.png" alt="SMOA Logo" className="size-full object-contain" />
         </div>
         <div className="leading-tight">
           <div className="font-tech text-sm font-semibold tracking-[0.14em] uppercase">
