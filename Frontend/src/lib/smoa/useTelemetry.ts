@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TelemetrySimulator } from "./mock";
+import { TelemetryDigitalTwin } from "./digitalTwin";
 import type { FaultInjection, LinkStatus, TelemetryFrame } from "./types";
 
 export const TELEMETRY_BUFFER = 300;
@@ -13,7 +14,7 @@ export const WINDOW_SECONDS = 60;
  *
  * TODO(backend): drop the simulator fallback once /ws/telemetry is live.
  */
-export function useTelemetry(faults: FaultInjection[]) {
+export function useTelemetry(faults: FaultInjection[], source: "simulator" | "digital-twin" = "simulator") {
   const [status, setStatus] = useState<LinkStatus>("connecting");
   const [history, setHistory] = useState<TelemetryFrame[]>([]);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -22,6 +23,12 @@ export function useTelemetry(faults: FaultInjection[]) {
 
   const push = useCallback((frame: TelemetryFrame) => {
     setHistory((prev) => {
+      if (prev.length > 0) {
+        const last = prev[prev.length - 1];
+        if (last && (last.met === frame.met || Math.abs(last.t - frame.t) < 500)) {
+          return prev;
+        }
+      }
       const next = prev.length >= TELEMETRY_BUFFER ? prev.slice(prev.length - TELEMETRY_BUFFER + 1) : prev.slice();
       next.push(frame);
       return next;
@@ -38,14 +45,15 @@ export function useTelemetry(faults: FaultInjection[]) {
       if (cancelled || interval) return;
       setLastError(reason);
       setStatus("degraded");
-      const sim = new TelemetrySimulator();
+      const generator =
+        source === "digital-twin" ? new TelemetryDigitalTwin() : new TelemetrySimulator();
       for (let i = 0; i < WINDOW_SECONDS; i += 1) {
-        sim.setFaults(faultsRef.current);
-        push(sim.next());
+        generator.setFaults(faultsRef.current);
+        push(generator.next());
       }
       interval = setInterval(() => {
-        sim.setFaults(faultsRef.current);
-        push(sim.next());
+        generator.setFaults(faultsRef.current);
+        push(generator.next());
       }, 1000);
     };
 
@@ -70,6 +78,8 @@ export function useTelemetry(faults: FaultInjection[]) {
           const parsed = JSON.parse(evt.data as string);
           if (parsed && parsed.type === "TELEMETRY_FRAME" && parsed.frame) {
             push(parsed.frame as TelemetryFrame);
+          } else if (parsed && parsed.met && parsed.power) {
+            push(parsed as TelemetryFrame);
           }
         } catch {
           setLastError("Malformed telemetry frame discarded.");
@@ -87,49 +97,51 @@ export function useTelemetry(faults: FaultInjection[]) {
       startSimulator("Telemetry socket unavailable — running local digital-twin simulator.");
     }
 
-    // Supabase Realtime Fallback / Dual Sync
+    // Supabase Realtime Fallback / Dual Sync (Only if WebSocket not connected)
     let supabaseChannel: any = null;
     try {
       import("../supabaseClient").then(({ supabase }) => {
+        if (cancelled) return;
         supabaseChannel = supabase
           .channel("telemetry-realtime")
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "telemetry_data" },
             (payload) => {
-              if (payload.new) {
-                const row = payload.new;
-                // Convert database row into telemetry frame format if needed
-                const frame: TelemetryFrame = {
-                  met: row.met || Math.floor(Date.now() / 1000),
-                  t: new Date(row.timestamp || Date.now()).getTime(),
-                  orbitAngle: row.Orbital_Phase || 0,
-                  eclipse: row.Eclipse_Status === 1,
-                  power: {
-                    busVoltage: row.Battery_Voltage || 28.0,
-                    stateOfCharge: row.Battery_SOC || 80.0,
-                    arrayPower: row.Power_Generation || 400.0,
-                  },
-                  thermal: {
-                    batteryTemp: row.Battery_Temperature || 20.0,
-                    payloadTemp: row.Payload_Temperature || 15.0,
-                    radiatorTemp: row.External_Temp || -30.0,
-                  },
-                  adcs: {
-                    roll: row.Roll || 0,
-                    pitch: row.Pitch || 0,
-                    yaw: row.Yaw || 0,
-                    bodyRate: row.Angular_Velocity || 0,
-                    wheelRpm: row.Reaction_Wheel_Speed || 2500,
-                  },
-                  comms: {
-                    signalDbm: row.Signal_Strength || -80,
-                    packetLoss: row.Packet_Loss || 0,
-                    rttSeconds: (row.Latency || 100) / 1000,
-                  },
-                  anomalyScore: 0.1,
-                };
-                push(frame);
+              if (payload.new && socket?.readyState !== WebSocket.OPEN) {
+                const row = payload.new as Record<string, any>;
+                if (row) {
+                  const frame: TelemetryFrame = {
+                    met: Number(row["met"] || Math.floor(Date.now() / 1000)),
+                    t: new Date(row["timestamp"] || Date.now()).getTime(),
+                    orbitAngle: Number(row["Orbital_Phase"] || 0),
+                    eclipse: row["Eclipse_Status"] === 1,
+                    power: {
+                      busVoltage: Number(row["Battery_Voltage"] || 28.0),
+                      stateOfCharge: Number(row["Battery_SOC"] || 80.0),
+                      arrayPower: Number(row["Power_Generation"] || 400.0),
+                    },
+                    thermal: {
+                      batteryTemp: Number(row["Battery_Temperature"] || 20.0),
+                      payloadTemp: Number(row["Payload_Temperature"] || 15.0),
+                      radiatorTemp: Number(row["External_Temp"] || -30.0),
+                    },
+                    adcs: {
+                      roll: Number(row["Roll"] || 0),
+                      pitch: Number(row["Pitch"] || 0),
+                      yaw: Number(row["Yaw"] || 0),
+                      bodyRate: Number(row["Angular_Velocity"] || 0),
+                      wheelRpm: Number(row["Reaction_Wheel_Speed"] || 2500),
+                    },
+                    comms: {
+                      signalDbm: Number(row["Signal_Strength"] || -80),
+                      packetLoss: Number(row["Packet_Loss"] || 0),
+                      rttSeconds: Number(row["Latency"] || 100) / 1000,
+                    },
+                    anomalyScore: 0.1,
+                  };
+                  push(frame);
+                }
               }
             }
           )
@@ -149,7 +161,7 @@ export function useTelemetry(faults: FaultInjection[]) {
         supabaseChannel.unsubscribe();
       }
     };
-  }, [push]);
+  }, [push, source]);
 
   const latest = history.length > 0 ? history[history.length - 1]! : null;
 

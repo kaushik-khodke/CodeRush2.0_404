@@ -26,13 +26,13 @@ export function EventFeed({
   const [open, setOpen] = useState<string | null>(null);
 
   return (
-    <section className="panel flex min-h-0 flex-col">
+    <section className="panel flex flex-col h-[540px]">
       <div className="panel-header">
         <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">Event &amp; Diagnosis Feed</h3>
         <span className="label-tech">ML Sentinel · reverse chron</span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto scroll-thin">
+      <div className="min-h-0 flex-1 overflow-y-auto scroll-thin pr-1">
         {loading && (
           <div className="space-y-px">
             {[0, 1, 2].map((i) => (

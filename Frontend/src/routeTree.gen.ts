@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConstellationRouteImport } from './routes/constellation'
+import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as ReplayRouteImport } from './routes/replay'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const ConstellationRoute = ConstellationRouteImport.update({
   path: '/constellation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlannerRoute = PlannerRouteImport.update({
+  id: '/planner',
+  path: '/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReplayRoute = ReplayRouteImport.update({
   id: '/replay',
   path: '/replay',
@@ -32,30 +38,34 @@ const ReplayRoute = ReplayRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/constellation': typeof ConstellationRoute
+  '/planner': typeof PlannerRoute
   '/replay': typeof ReplayRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/constellation': typeof ConstellationRoute
+  '/planner': typeof PlannerRoute
   '/replay': typeof ReplayRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/constellation': typeof ConstellationRoute
+  '/planner': typeof PlannerRoute
   '/replay': typeof ReplayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/constellation' | '/replay'
+  fullPaths: '/' | '/constellation' | '/planner' | '/replay'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/constellation' | '/replay'
-  id: '__root__' | '/' | '/constellation' | '/replay'
+  to: '/' | '/constellation' | '/planner' | '/replay'
+  id: '__root__' | '/' | '/constellation' | '/planner' | '/replay'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConstellationRoute: typeof ConstellationRoute
+  PlannerRoute: typeof PlannerRoute
   ReplayRoute: typeof ReplayRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConstellationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/planner': {
+      id: '/planner'
+      path: '/planner'
+      fullPath: '/planner'
+      preLoaderRoute: typeof PlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/replay': {
       id: '/replay'
       path: '/replay'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConstellationRoute: ConstellationRoute,
+  PlannerRoute: PlannerRoute,
   ReplayRoute: ReplayRoute,
 }
 export const routeTree = rootRouteImport

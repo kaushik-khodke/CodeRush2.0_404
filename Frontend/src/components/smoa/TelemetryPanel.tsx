@@ -30,8 +30,6 @@ const baseOptions: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
   animation: false,
-  parsing: false,
-  normalized: true,
   interaction: { mode: "index", intersect: false },
   elements: { point: { radius: 0 }, line: { borderWidth: 1.5, tension: 0.25 } },
   plugins: {
@@ -106,15 +104,21 @@ function ChartCard({
   const data = useMemo(() => {
     const anchor = last?.met ?? 0;
     return {
-      datasets: series.map((s, i) => ({
-        label: s.label,
-        yAxisID: `y${i}`,
-        data: window.map((f) => ({ x: f.met - anchor, y: s.read(f) })),
-        borderColor: s.color,
-        backgroundColor: `${s.color}1f`,
-        fill: false,
-        spanGaps: true,
-      })),
+      datasets: series.map((s, i) => {
+        const points = window
+          .map((f) => ({ x: (f?.met ?? 0) - anchor, y: s.read(f) }))
+          .filter((p) => !isNaN(p.x) && !isNaN(p.y))
+          .sort((a, b) => a.x - b.x);
+        return {
+          label: s.label,
+          yAxisID: `y${i}`,
+          data: points,
+          borderColor: s.color,
+          backgroundColor: `${s.color}1f`,
+          fill: false,
+          spanGaps: true,
+        };
+      }),
     };
   }, [window, series, last]);
 
@@ -176,23 +180,23 @@ function ChartCard({
 
 export function TelemetryPanel({ frames, status }: { frames: TelemetryFrame[]; status: LinkStatus }) {
   const power = useMemo<Series[]>(() => [
-    { label: "Bus V", unit: "V", color: chartColors.teal, read: (f) => f.power.busVoltage },
-    { label: "SoC", unit: "%", color: chartColors.green, read: (f) => f.power.stateOfCharge, fmt: (v) => v.toFixed(1) },
-    { label: "Array", unit: "W", color: chartColors.amber, read: (f) => f.power.arrayPower, fmt: (v) => v.toFixed(0) },
+    { label: "Bus V", unit: "V", color: chartColors.teal, read: (f) => f?.power?.busVoltage ?? 0 },
+    { label: "SoC", unit: "%", color: chartColors.green, read: (f) => f?.power?.stateOfCharge ?? 0, fmt: (v) => v?.toFixed(1) ?? "0.0" },
+    { label: "Array", unit: "W", color: chartColors.amber, read: (f) => f?.power?.arrayPower ?? 0, fmt: (v) => v?.toFixed(0) ?? "0" },
   ], []);
   const thermal = useMemo<Series[]>(() => [
-    { label: "Battery", unit: "°C", color: chartColors.amber, read: (f) => f.thermal.batteryTemp },
-    { label: "Payload", unit: "°C", color: chartColors.tealLight, read: (f) => f.thermal.payloadTemp },
-    { label: "Radiator", unit: "°C", color: chartColors.teal, read: (f) => f.thermal.radiatorTemp },
+    { label: "Battery", unit: "°C", color: chartColors.amber, read: (f) => f?.thermal?.batteryTemp ?? 0 },
+    { label: "Payload", unit: "°C", color: chartColors.tealLight, read: (f) => f?.thermal?.payloadTemp ?? 0 },
+    { label: "Radiator", unit: "°C", color: chartColors.teal, read: (f) => f?.thermal?.radiatorTemp ?? 0 },
   ], []);
   const adcs = useMemo<Series[]>(() => [
-    { label: "Roll", unit: "°", color: chartColors.teal, read: (f) => f.adcs.roll },
-    { label: "Pitch", unit: "°", color: chartColors.tealLight, read: (f) => f.adcs.pitch },
-    { label: "Body rate", unit: "°/s", color: chartColors.amber, read: (f) => f.adcs.bodyRate, fmt: (v) => v.toFixed(3) },
+    { label: "Roll", unit: "°", color: chartColors.teal, read: (f) => f?.adcs?.roll ?? 0 },
+    { label: "Pitch", unit: "°", color: chartColors.tealLight, read: (f) => f?.adcs?.pitch ?? 0 },
+    { label: "Body rate", unit: "°/s", color: chartColors.amber, read: (f) => f?.adcs?.bodyRate ?? 0, fmt: (v) => v?.toFixed(3) ?? "0.000" },
   ], []);
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-2 overflow-y-auto scroll-thin pr-0.5")}>
+    <div className={cn("flex flex-col gap-2 overflow-y-auto scroll-thin pr-0.5 h-[540px]")}>
       <ChartCard title="Electrical Power" series={power} frames={frames} status={status} badge="ML Life Regressor" />
       <ChartCard title="Thermal Control" series={thermal} frames={frames} status={status} badge="ML Temp Regressor" />
       <ChartCard title="ADCS" series={adcs} frames={frames} status={status} />

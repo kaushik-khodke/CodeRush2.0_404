@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { CircleUser, History } from "lucide-react";
+import { CircleUser, History, Play, Pause, RotateCcw } from "lucide-react";
 import { ReplayTimeline } from "@/components/smoa/ReplayTimeline";
 import { TelemetryPanel } from "@/components/smoa/TelemetryPanel";
 import { AttitudeViewer } from "@/components/smoa/AttitudeViewer";
@@ -28,39 +28,93 @@ export const Route = createFileRoute("/replay")({
 });
 
 function ReplayPage() {
-  // TODO(backend): fetch the incident archive from Supabase (/api/incidents/:id).
-  const [incident] = useState(() => mockIncident());
+  const [incident, setIncident] = useState(() => mockIncident());
   const [index, setIndex] = useState(0);
 
-  const frames = useMemo(() => incident.frames.slice(0, index + 1), [incident, index]);
+  // Pre-warm initial frames (min 20 frames) so Chart.js immediately plots line waveforms at t=0
+  const frames = useMemo(
+    () => incident.frames.slice(0, Math.max(20, index + 1)),
+    [incident, index]
+  );
   const latest = frames[frames.length - 1] ?? null;
 
   const flagged = index >= incident.flagAtSecond;
   const decided = index >= incident.operatorDecision.decidedAtSecond;
 
+  // Attempt to load real telemetry records from backend API /replay endpoint
+  useEffect(() => {
+    fetch("/replay?limit=300")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.telemetry_records) && data.telemetry_records.length >= 20) {
+          // Map backend telemetry records into ReplayIncident frames
+          const mappedFrames = data.telemetry_records.map((r: any, idx: number) => ({
+            met: 128400 + idx,
+            t: new Date(r.timestamp || Date.now()).getTime(),
+            orbitAngle: (idx / 300) * 360,
+            eclipse: idx > 140 && idx < 240,
+            power: {
+              busVoltage: r.bus_voltage ?? 27.6,
+              stateOfCharge: r.battery_soc ?? 78.4,
+              arrayPower: r.solar_array_power ?? 412.0,
+            },
+            thermal: {
+              batteryTemp: r.battery_temp ?? 18.2,
+              payloadTemp: r.payload_temp ?? -6.4,
+              radiatorTemp: -31.5,
+            },
+            adcs: {
+              roll: r.roll ?? 0,
+              pitch: r.pitch ?? 0,
+              yaw: r.yaw ?? 0,
+              bodyRate: r.angular_velocity ?? 0.32,
+              wheelRpm: r.reaction_wheel_speed ?? 2840,
+            },
+            comms: {
+              signalDbm: -92.4,
+              packetLoss: 0.4,
+              rttSeconds: 0.42,
+            },
+          }));
+
+          setIncident((prev) => ({
+            ...prev,
+            durationSeconds: mappedFrames.length,
+            frames: mappedFrames,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
-    <div className="flex h-screen min-w-[1280px] flex-col bg-background">
+    <div className="flex flex-col min-h-screen min-w-[1280px] bg-background text-foreground overflow-y-auto">
       <TopBar status="live" met={latest?.met ?? null} anomalyCount={1} criticalCount={1} />
 
-      <div className="flex items-center gap-2 border-b border-primary/40 bg-primary/10 px-4 py-1.5">
-        <History className="size-3.5 text-primary" />
-        <span className="text-[0.75rem] text-primary">
-          Replaying archived incident {incident.id} — {incident.name}
-        </span>
-        <span className="num ml-auto text-[0.7rem] text-primary/80">
-          {new Date(incident.startedAt).toISOString().replace("T", " ").slice(0, 19)}Z
-        </span>
+      <div className="flex items-center justify-between border-b border-primary/40 bg-primary/10 px-4 py-2">
+        <div className="flex items-center gap-2">
+          <History className="size-4 text-primary" />
+          <span className="font-tech text-xs font-bold text-primary uppercase">
+            Digital Twin Incident Replay: {incident.id} — {incident.name}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="num text-xs text-primary/80">
+            {new Date(incident.startedAt || Date.now()).toISOString().replace("T", " ").slice(0, 19)}Z
+          </span>
+        </div>
       </div>
 
-      <main className="grid min-h-0 flex-1 grid-cols-[22rem_minmax(0,1fr)_24rem] gap-2 p-2">
+      {/* Main 3-Column Telemetry & 3D Twin Replay Grid */}
+      <main className="grid flex-1 grid-cols-1 lg:grid-cols-[22rem_minmax(0,1fr)_24rem] gap-4 p-4 items-start">
         <TelemetryPanel frames={frames} status="live" />
         <AttitudeViewer latest={latest} status="live" />
 
-        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto scroll-thin pr-0.5">
+        <div className="flex flex-col gap-3 h-[540px] overflow-y-auto scroll-thin pr-1">
           <section
             className={cn(
-              "panel transition-opacity duration-200",
-              flagged ? "opacity-100" : "opacity-40",
+              "panel transition-all duration-200 border-l-2",
+              flagged ? "opacity-100 border-l-warning" : "opacity-50 border-l-border"
             )}
           >
             <div className="panel-header">
@@ -76,19 +130,24 @@ function ReplayPage() {
                       {incident.event.severity}
                     </span>
                   </div>
-                  <p className="mt-1 text-[0.82rem] leading-snug font-medium">{incident.event.title}</p>
+                  <p className="mt-1 text-[0.82rem] leading-snug font-medium text-foreground">{incident.event.title}</p>
                   <p className="label-tech mt-1">{incident.event.detector}</p>
                 </div>
                 <DiagnosisCard diagnosis={incident.event.diagnosis} />
               </>
             ) : (
-              <p className="px-3 py-4 text-center text-[0.75rem] text-muted-foreground">
-                Nominal — anomaly fires at T+{incident.flagAtSecond}s
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground font-tech">
+                Nominal — anomaly fires at T+{incident.flagAtSecond}s. Click ▶ PLAY at bottom timeline.
               </p>
             )}
           </section>
 
-          <section className={cn("panel transition-opacity duration-200", decided ? "opacity-100" : "opacity-40")}>
+          <section
+            className={cn(
+              "panel transition-all duration-200 border-l-2",
+              decided ? "opacity-100 border-l-nominal" : "opacity-50 border-l-border"
+            )}
+          >
             <div className="panel-header">
               <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">Operator Decision</h3>
               <span className="num text-[0.7rem] text-muted-foreground">
@@ -103,21 +162,22 @@ function ReplayPage() {
                     {incident.operatorDecision.operator}
                   </span>
                 </div>
-                <p className="num text-[0.8rem] text-foreground">{incident.operatorDecision.action}</p>
+                <p className="num text-[0.8rem] font-semibold text-nominal">{incident.operatorDecision.action}</p>
                 <p className="text-[0.78rem] leading-snug text-muted-foreground">
                   {incident.operatorDecision.outcome}
                 </p>
               </div>
             ) : (
-              <p className="px-3 py-4 text-center text-[0.75rem] text-muted-foreground">
-                Awaiting operator authorization in replay
+              <p className="px-3 py-6 text-center text-xs text-muted-foreground font-tech">
+                Awaiting operator authorization in replay sequence
               </p>
             )}
           </section>
         </div>
       </main>
 
-      <div className="px-2 pb-2">
+      {/* Replay Timeline Controls */}
+      <div className="p-4 border-t border-border bg-surface/40">
         <ReplayTimeline incident={incident} index={index} onIndexChange={setIndex} />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Radio, Satellite } from "lucide-react";
+import { AlertTriangle, Cpu, Radio, Satellite } from "lucide-react";
 import { formatMet } from "@/lib/smoa/api";
 import type { LinkStatus } from "@/lib/smoa/types";
 import { cn } from "@/lib/utils";
@@ -18,9 +18,19 @@ interface TopBarProps {
   anomalyCount: number;
   criticalCount: number;
   anomalyScore?: number;
+  onToggleAgents?: () => void;
+  agentsOpen?: boolean;
 }
 
-export function TopBar({ status, met, anomalyCount, criticalCount, anomalyScore }: TopBarProps) {
+export function TopBar({
+  status,
+  met,
+  anomalyCount,
+  criticalCount,
+  anomalyScore,
+  onToggleAgents,
+  agentsOpen,
+}: TopBarProps) {
   const meta = statusMeta[status];
 
   return (
@@ -37,10 +47,24 @@ export function TopBar({ status, met, anomalyCount, criticalCount, anomalyScore 
         </div>
       </div>
 
-      <nav className="flex items-center gap-1">
+      <nav className="flex items-center gap-2">
+        <button
+          onClick={onToggleAgents}
+          className={cn(
+            "flex items-center gap-1.5 rounded-sm px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.1em] uppercase transition-colors duration-150 border cursor-pointer",
+            agentsOpen
+              ? "bg-primary/20 text-primary border-primary"
+              : "border-border bg-surface-raised/40 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
+          )}
+        >
+          <Cpu className="size-3.5 text-primary" />
+          Control Room (9 Nodes)
+        </button>
+
         {[
           { to: "/", label: "Operations" },
           { to: "/constellation", label: "Constellation" },
+          { to: "/planner", label: "Mission Planner" },
           { to: "/replay", label: "Digital Twin Replay" },
         ].map((item) => (
           <Link
@@ -59,6 +83,13 @@ export function TopBar({ status, met, anomalyCount, criticalCount, anomalyScore 
         <div className="text-right leading-tight">
           <div className="label-tech">MET (ddd:hh:mm:ss)</div>
           <div className="num text-sm text-foreground">{met === null ? "---:--:--:--" : formatMet(met)}</div>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-sm border border-primary/40 bg-primary/10 px-2.5 py-1.5">
+          <Satellite className="size-3.5 text-primary" />
+          <span className="font-tech text-[0.68rem] font-bold text-primary tracking-[0.08em] uppercase">
+            BSK Twin Active
+          </span>
         </div>
 
         {anomalyScore !== undefined && (

@@ -79,7 +79,6 @@ export interface Diagnosis {
   constraintViolations?: string[];
 }
 
-
 export interface AnomalyEvent {
   id: string;
   ts: number;
@@ -149,4 +148,33 @@ export interface Agent {
   lastAction: string;
   pipelineOrder: number;
   outputType: string;
+}
+
+export interface ActivityScheduleItem {
+  id: string;
+  activityName: string;
+  activityType: "OBSERVATION" | "DOWNLINK" | "MAINTENANCE" | "CALIBRATION" | "SAFE_MODE_TRANSITION";
+  status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "FEASIBLE";
+  priority: number;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  resourceRequirements: {
+    powerWatts: number;
+    batterySocMin: number;
+    storageGb: number;
+    bandwidthMbps?: number;
+  };
+  precedenceConstraints: string[];
+  selectionRationale: string;
+}
+
+export interface CommunicationWindowInfo {
+  id: string;
+  groundStationName: string;
+  startTime: string;
+  endTime: string;
+  maxElevationDeg: number;
+  bandwidthMbps: number;
+  status: "UPCOMING" | "ACTIVE" | "COMPLETED";
 }
