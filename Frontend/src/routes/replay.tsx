@@ -48,7 +48,7 @@ function ReplayPage() {
           Replaying archived incident {incident.id} — {incident.name}
         </span>
         <span className="num ml-auto text-[0.7rem] text-primary/80">
-          {new Date(incident.startedAt).toISOString().replace("T", " ").slice(0, 19)}Z
+          {new Date(incident.startedAt || Date.now()).toISOString().replace("T", " ").slice(0, 19)}Z
         </span>
       </div>
 

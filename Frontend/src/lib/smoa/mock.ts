@@ -1,4 +1,5 @@
 import type {
+  Agent,
   AnomalyEvent,
   FaultInjection,
   PendingCommand,

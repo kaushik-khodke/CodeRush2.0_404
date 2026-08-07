@@ -48,12 +48,40 @@ class SupabaseRepository:
             return None
 
     @classmethod
+    def get_latest_telemetry_id(cls) -> Optional[str]:
+        client = get_supabase_client()
+        if not client:
+            return None
+        try:
+            res = client.table("telemetry_data").select("id").order("created_at", desc=True).limit(1).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]["id"]
+            return None
+        except Exception:
+            return None
+
+    @classmethod
     def insert_anomaly(cls, anomaly_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         client = get_supabase_client()
         if not client:
             return None
         try:
             data = {k: v for k, v in anomaly_data.items() if v is not None}
+            if "telemetry_id" not in data or not data["telemetry_id"]:
+                latest_id = cls.get_latest_telemetry_id()
+                if latest_id:
+                    data["telemetry_id"] = latest_id
+            
+            # Map severity enum safely
+            if "severity" in data:
+                sev = str(data["severity"]).upper()
+                if sev == "WARNING":
+                    data["severity"] = "HIGH"
+                elif sev not in ["LOW", "MEDIUM", "HIGH", "CRITICAL"]:
+                    data["severity"] = "MEDIUM"
+                else:
+                    data["severity"] = sev
+
             res = client.table("anomalies").insert(data).execute()
             if res.data and len(res.data) > 0:
                 return res.data[0]
@@ -136,3 +164,41 @@ class SupabaseRepository:
         except Exception as e:
             logger.warning(f"[Supabase Sync Warning] Failed to insert mission memory into Supabase: {e}")
             return None
+
+    @classmethod
+    def get_activity_schedules(cls) -> List[Dict[str, Any]]:
+        client = get_supabase_client()
+        if not client:
+            return []
+        try:
+            res = client.table("activity_schedules").select("*").order("start_time", desc=False).execute()
+            return res.data or []
+        except Exception as e:
+            logger.warning(f"[Supabase Sync Warning] Failed to fetch activity schedules: {e}")
+            return []
+
+    @classmethod
+    def insert_activity_schedule(cls, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        client = get_supabase_client()
+        if not client:
+            return None
+        try:
+            res = client.table("activity_schedules").insert(item).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]
+            return None
+        except Exception as e:
+            logger.warning(f"[Supabase Sync Warning] Failed to insert activity schedule: {e}")
+            return None
+
+    @classmethod
+    def get_communication_windows(cls) -> List[Dict[str, Any]]:
+        client = get_supabase_client()
+        if not client:
+            return []
+        try:
+            res = client.table("communication_windows").select("*").order("start_time", desc=False).execute()
+            return res.data or []
+        except Exception as e:
+            logger.warning(f"[Supabase Sync Warning] Failed to fetch communication windows: {e}")
+            return []

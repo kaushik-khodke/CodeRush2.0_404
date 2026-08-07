@@ -6,7 +6,7 @@ import type { AdcsFrame } from "@/lib/smoa/types";
 
 const DEG = Math.PI / 180;
 
-function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> }) {
+function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> | null }) {
   const group = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
@@ -64,7 +64,7 @@ function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> 
   );
 }
 
-function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> }) {
+function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> | null }) {
   const marker = useRef<THREE.Mesh>(null);
   const radius = 4.6;
 

@@ -25,7 +25,22 @@ export function FaultInjectionPanel({
 
   const set = (kind: FaultKind, subsystem: Subsystem, magnitude: number) => {
     const rest = faults.filter((f) => !(f.kind === kind && f.subsystem === subsystem));
-    onChange(magnitude > 0 ? [...rest, { kind, subsystem, magnitude }] : rest);
+    const nextFaults = magnitude > 0 ? [...rest, { kind, subsystem, magnitude }] : rest;
+    onChange(nextFaults);
+
+    if (magnitude > 0) {
+      let mode = "nominal";
+      if (subsystem === "power") mode = "power_droop";
+      else if (subsystem === "adcs") mode = "adcs_oscillation";
+      else if (subsystem === "thermal") mode = "thermal_overheat";
+      else if (subsystem === "comms") mode = "comms_loss";
+
+      fetch("/api/seeding/anomaly", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      }).catch(() => {});
+    }
   };
 
   const active = faults.length;

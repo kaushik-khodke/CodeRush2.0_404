@@ -49,7 +49,8 @@ export async function authorizeCommand(
   }
 }
 
-export function formatMet(met: number) {
+export function formatMet(met: number | null | undefined) {
+  if (met === null || met === undefined || isNaN(met)) return "000:00:00:00";
   const d = Math.floor(met / 86400);
   const h = Math.floor((met % 86400) / 3600);
   const m = Math.floor((met % 3600) / 60);
@@ -58,11 +59,19 @@ export function formatMet(met: number) {
   return `${p(d, 3)}:${p(h)}:${p(m)}:${p(s)}`;
 }
 
-export function formatClock(ts: number) {
-  return new Date(ts).toISOString().slice(11, 19) + "Z";
+export function formatClock(ts: number | null | undefined) {
+  if (!ts || isNaN(ts)) return "--:--:--Z";
+  try {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return "--:--:--Z";
+    return d.toISOString().slice(11, 19) + "Z";
+  } catch {
+    return "--:--:--Z";
+  }
 }
 
-export function timeAgo(ts: number) {
+export function timeAgo(ts: number | null | undefined) {
+  if (!ts || isNaN(ts)) return "just now";
   const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
   if (s < 60) return `${s}s ago`;
   if (s < 3600) return `${Math.round(s / 60)}m ago`;
