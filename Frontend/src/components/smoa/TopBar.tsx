@@ -40,6 +40,7 @@ export function TopBar({ status, met, anomalyCount, criticalCount, anomalyScore 
       <nav className="flex items-center gap-1">
         {[
           { to: "/", label: "Operations" },
+          { to: "/constellation", label: "Constellation" },
           { to: "/replay", label: "Digital Twin Replay" },
         ].map((item) => (
           <Link

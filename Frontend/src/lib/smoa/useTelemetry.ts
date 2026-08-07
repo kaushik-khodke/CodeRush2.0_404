@@ -67,7 +67,10 @@ export function useTelemetry(faults: FaultInjection[]) {
       };
       socket.onmessage = (evt) => {
         try {
-          push(JSON.parse(evt.data as string) as TelemetryFrame);
+          const parsed = JSON.parse(evt.data as string);
+          if (parsed && parsed.type === "TELEMETRY_FRAME" && parsed.frame) {
+            push(parsed.frame as TelemetryFrame);
+          }
         } catch {
           setLastError("Malformed telemetry frame discarded.");
         }

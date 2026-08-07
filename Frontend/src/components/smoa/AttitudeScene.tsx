@@ -3,6 +3,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import type { AdcsFrame } from "@/lib/smoa/types";
+import { getPositionAtTime } from "@/lib/orbit";
 
 const DEG = Math.PI / 180;
 
@@ -64,28 +65,53 @@ function Spacecraft({ attitude }: { attitude: React.RefObject<AdcsFrame | null> 
   );
 }
 
-function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> }) {
+function OrbitTrack({
+  metRef,
+}: {
+  angleRef: React.RefObject<number | null> | null;
+  metRef: React.RefObject<number> | null;
+}) {
   const marker = useRef<THREE.Mesh>(null);
-  const radius = 4.6;
+  const lineRef = useRef<THREE.Line>(null);
 
   useFrame(() => {
     const m = marker.current;
-    if (!m) return;
-    const a = (angleRef?.current ?? 0) * DEG;
-    m.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+    const l = lineRef.current;
+    if (!m || !l) return;
 
+    // Use current MET or default epoch
+    const t = metRef?.current ?? 128400;
+
+    // Position marker at current ECI coordinates
+    const pos = getPositionAtTime(t);
+    m.position.set(pos[0], pos[1], pos[2]);
+
+    // Recalculate orbit line points across 1 orbital period (5954 seconds)
+    const points: THREE.Vector3[] = [];
+    const period = 5954;
+    const steps = 128;
+    for (let i = 0; i <= steps; i++) {
+      const checkT = t - period + (i * period) / steps;
+      const p = getPositionAtTime(checkT);
+      points.push(new THREE.Vector3(p[0], p[1], p[2]));
+    }
+
+    l.geometry.setFromPoints(points);
   });
 
   return (
-    <group rotation={[0.35, 0, 0.18]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[radius - 0.012, radius + 0.012, 128]} />
-        <meshBasicMaterial color="#1F6F78" transparent opacity={0.55} side={THREE.DoubleSide} />
-      </mesh>
+    <group>
+      {/* J2-perturbed dynamic trajectory line */}
+      <line ref={lineRef}>
+        <bufferGeometry />
+        <lineBasicMaterial color="#1F6F78" transparent opacity={0.55} />
+      </line>
+      {/* Active satellite position indicator */}
       <mesh ref={marker}>
         <sphereGeometry args={[0.11, 16, 16]} />
         <meshBasicMaterial color="#D9A441" />
       </mesh>
+      {/* Central Earth wireframe reference */}
       <mesh>
         <sphereGeometry args={[1.5, 32, 32]} />
         <meshStandardMaterial color="#20323A" metalness={0.1} roughness={0.9} wireframe />
@@ -97,9 +123,11 @@ function OrbitTrack({ angleRef }: { angleRef: React.RefObject<number | null> }) 
 export default function AttitudeScene({
   attitude,
   orbitAngle,
+  metRef,
 }: {
   attitude: React.RefObject<AdcsFrame | null> | null;
   orbitAngle: React.RefObject<number | null> | null;
+  metRef: React.RefObject<number> | null;
 }) {
   return (
     <Canvas camera={{ position: [5.5, 3.2, 6.5], fov: 42 }} dpr={[1, 1.75]}>
@@ -111,7 +139,7 @@ export default function AttitudeScene({
         <Stars radius={90} depth={45} count={2600} factor={3.2} saturation={0} fade speed={0.4} />
       </Suspense>
       <Spacecraft attitude={attitude} />
-      <OrbitTrack angleRef={orbitAngle} />
+      <OrbitTrack angleRef={orbitAngle} metRef={metRef} />
       <OrbitControls enablePan={false} minDistance={5} maxDistance={16} autoRotate autoRotateSpeed={0.25} />
     </Canvas>
   );

@@ -14,6 +14,14 @@ async def lifespan(app: FastAPI):
         print("[Startup] Database Schema Initialized Successfully.")
     except Exception as e:
         print(f"[Startup Warning] Could not initialize DB tables automatically: {e}")
+    
+    try:
+        from routers.seeding import start_seeding
+        await start_seeding()
+        print("[Startup] Auto-started background telemetry data stream.")
+    except Exception as e:
+        print(f"[Startup Warning] Could not start telemetry data stream: {e}")
+        
     yield
     print("[Shutdown] Mission Control Server Stopping...")
 

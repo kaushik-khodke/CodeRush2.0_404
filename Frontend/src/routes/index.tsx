@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, ClientOnly } from "@tanstack/react-router";
 import { AlertTriangle, WifiOff } from "lucide-react";
 import { TopBar } from "@/components/smoa/TopBar";
 import { TelemetryPanel } from "@/components/smoa/TelemetryPanel";
@@ -12,6 +12,7 @@ import { useTelemetry } from "@/lib/smoa/useTelemetry";
 import type { AnomalyEvent, FaultInjection, PendingCommand } from "@/lib/smoa/types";
 import { mockAgents } from "@/lib/smoa/mock";
 import { AgentRoster } from "@/components/smoa/AgentRoster";
+import { ConstellationWidget } from "@/components/ConstellationWidget";
 
 const title = "ORION AI — Mission Operations Control";
 const description =
@@ -32,7 +33,8 @@ export const Route = createFileRoute("/")({
 });
 
 function OperationsConsole() {
-  const [faults] = useState<FaultInjection[]>([]);
+  const [faults, setFaults] = useState<FaultInjection[]>([]);
+  const { status, history, latest, lastError } = useTelemetry(faults);
   const [agents] = useState(() => mockAgents());
   const [selectedAgentId, setSelectedAgentId] = useState("telemetry_monitor");
 
