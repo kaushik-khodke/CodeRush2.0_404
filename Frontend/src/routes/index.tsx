@@ -83,8 +83,15 @@ function OperationsConsole() {
       const targetCmd = commands.find((c) => c.id === id);
       authorizeCommand(id, decision)
         .then((res) => {
-          // Remove command from pending queue state
-          setCommands((prev) => prev.filter((c) => c.id !== id));
+          // Remove command and any duplicate commands with same name/subsystem from pending queue state
+          setCommands((prev) =>
+            prev.filter(
+              (c) =>
+                c.id !== id &&
+                c.command !== targetCmd?.command &&
+                c.subsystem !== targetCmd?.subsystem
+            )
+          );
           // Remove linked anomaly event from Event Feed and Diagnosis card
           if (targetCmd) {
             setEvents((prev) =>
@@ -172,7 +179,7 @@ function OperationsConsole() {
       )}
 
       {/* Main Spacious Telemetry, 3D Twin & Event Grid */}
-      <main className="grid min-h-[520px] flex-1 grid-cols-1 lg:grid-cols-[22rem_minmax(0,1fr)_24rem] gap-4 p-4">
+      <main className="grid flex-1 grid-cols-1 lg:grid-cols-[22rem_minmax(0,1fr)_24rem] gap-4 p-4 items-start">
         <TelemetryPanel frames={history} status={status} />
         <AttitudeViewer latest={latest} status={status} />
         <EventFeed events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} />

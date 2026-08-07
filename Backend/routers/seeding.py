@@ -662,8 +662,13 @@ async def set_anomaly(req: AnomalyRequest):
     
     event, cmd = create_anomaly_event_and_command(req.mode)
     if event:
+        # Deduplicate events by subsystem
+        state.events = [e for e in state.events if e.get("subsystem") != event.get("subsystem")]
         state.events.insert(0, event)
+        
         if cmd:
+            # Deduplicate pending commands by command name
+            state.pending_commands = [c for c in state.pending_commands if c.get("command") != cmd.get("command")]
             state.pending_commands.insert(0, cmd)
             
         try:
@@ -712,21 +717,33 @@ async def set_custom(req: CustomParamsRequest):
     event, cmd = None, None
     if excursions:
         detail = "Manual Custom Offsets Active: " + ", ".join(excursions[:3]) + (f" (+{len(excursions)-3} more)" if len(excursions) > 3 else "")
-        event, cmd = create_anomaly_event_and_command("custom_offset", detail)
-        state.events.insert(0, event)
-        if cmd:
-            state.pending_commands.insert(0, cmd)
+        
+        # Check if RESET_SENSOR_OFFSETS_TO_ZERO command already exists
+        existing_cmd = next((c for c in state.pending_commands if c.get("command") == "RESET_SENSOR_OFFSETS_TO_ZERO" and c.get("state") == "pending"), None)
+        if existing_cmd:
+            existing_cmd["ts"] = int(time.time() * 1000)
+            existing_cmd["summary"] = f"Reset all fine-tuned sensor offsets back to zero nominal baseline. Active: {detail}"
+            cmd = existing_cmd
+        else:
+            event, cmd = create_anomaly_event_and_command("custom_offset", detail)
+            if event:
+                state.events = [e for e in state.events if e.get("subsystem") != "sensors"]
+                state.events.insert(0, event)
+            if cmd:
+                state.pending_commands = [c for c in state.pending_commands if c.get("command") != "RESET_SENSOR_OFFSETS_TO_ZERO"]
+                state.pending_commands.insert(0, cmd)
 
-        try:
-            from database.repositories.supabase_repository import SupabaseRepository
-            SupabaseRepository.insert_anomaly({
-                "anomaly_type": "Custom Sensor Excursion",
-                "severity": "HIGH",
-                "description": detail,
-                "recommended_procedure": "RESET_SENSOR_OFFSETS_TO_ZERO"
-            })
-        except Exception:
-            pass
+            try:
+                from database.repositories.supabase_repository import SupabaseRepository
+                if event:
+                    SupabaseRepository.insert_anomaly({
+                        "anomaly_type": "Custom Sensor Excursion",
+                        "severity": "HIGH",
+                        "description": detail,
+                        "recommended_procedure": "RESET_SENSOR_OFFSETS_TO_ZERO"
+                    })
+            except Exception:
+                pass
 
         await ws_manager.broadcast({
             "type": "ANOMALY_EVENT",
@@ -764,7 +781,15 @@ def get_events():
 
 @router.get("/api/commands/pending")
 def get_pending_commands():
-    return [c for c in state.pending_commands if c.get("state") == "pending"]
+    seen = set()
+    unique_pending = []
+    for c in state.pending_commands:
+        if c.get("state") == "pending":
+            cmd_name = c.get("command")
+            if cmd_name not in seen:
+                seen.add(cmd_name)
+                unique_pending.append(c)
+    return unique_pending
 
 @router.post("/api/commands/{id}/authorize")
 async def authorize_command(id: str, req: AuthRequest):
@@ -774,8 +799,13 @@ async def authorize_command(id: str, req: AuthRequest):
             c["state"] = decision_state
             linked_evt_id = c.get("linkedEventId")
             cmd_subsystem = c.get("subsystem")
+            target_cmd_name = c.get("command")
             
-            # Remove linked anomaly event from active events feed & reset telemetry to nominal
+            # Remove ALL duplicate pending commands and matching anomaly events
+            state.pending_commands = [
+                item for item in state.pending_commands
+                if item.get("id") != id and item.get("command") != target_cmd_name and item.get("subsystem") != cmd_subsystem
+            ]
             state.events = [e for e in state.events if e.get("id") != linked_evt_id and e.get("subsystem") != cmd_subsystem]
             state.anomaly_mode = "nominal"
             state.custom_params = {}

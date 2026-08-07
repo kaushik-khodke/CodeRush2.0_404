@@ -196,7 +196,7 @@ export function TelemetryPanel({ frames, status }: { frames: TelemetryFrame[]; s
   ], []);
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-2 overflow-y-auto scroll-thin pr-0.5")}>
+    <div className={cn("flex flex-col gap-2 overflow-y-auto scroll-thin pr-0.5 h-[540px]")}>
       <ChartCard title="Electrical Power" series={power} frames={frames} status={status} badge="ML Life Regressor" />
       <ChartCard title="Thermal Control" series={thermal} frames={frames} status={status} badge="ML Temp Regressor" />
       <ChartCard title="ADCS" series={adcs} frames={frames} status={status} />

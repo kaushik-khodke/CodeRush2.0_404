@@ -49,7 +49,7 @@ export function AttitudeViewer({ latest, status }: { latest: TelemetryFrame | nu
   const cpuTemp = latest?.thermal?.payloadTemp ?? 35.0;
 
   return (
-    <section className="panel flex min-h-0 flex-col">
+    <section className="panel flex flex-col h-[540px]">
       <div className="panel-header flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">
