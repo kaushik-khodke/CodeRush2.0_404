@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from agentic.state import MissionGraphState
 from agentic.schemas.flight_director_schema import FlightDirectorOutput
 from agentic.prompts.flight_director_prompt import FLIGHT_DIRECTOR_SYSTEM_PROMPT
-from agentic.tracing import get_langfuse_callback
+from agentic.tracing import get_langfuse_callback, log_agent_trace
 from config import settings
 
 def run_flight_director_agent(state: MissionGraphState) -> MissionGraphState:
@@ -60,6 +60,14 @@ def run_flight_director_agent(state: MissionGraphState) -> MissionGraphState:
 
             parsed = json.loads(text)
             output = FlightDirectorOutput(**parsed)
+
+            log_agent_trace(
+                trace_name="SMOA Flight Director Recommendation Synthesis",
+                agent_name="Flight Director Agent (llama-3.3-70b-versatile)",
+                prompt=prompt_user_input,
+                output=output.model_dump(),
+                metadata={"recommended_procedure": output.recommended_procedure, "confidence": output.confidence}
+            )
         except Exception as e:
             print(f"[Flight Director Agent LLM Warning] Groq fallback: {e}")
             output = _fallback_flight_director(diag, sim, top_sop, failure_class)

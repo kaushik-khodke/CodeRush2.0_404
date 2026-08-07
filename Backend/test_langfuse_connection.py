@@ -1,7 +1,5 @@
-import os
-import time
 from config import settings
-from langfuse.callback import CallbackHandler
+from agentic.tracing import get_langfuse_client, log_agent_trace, flush_langfuse
 from langchain_groq import ChatGroq
 
 sec = settings.LANGFUSE_SECRET_KEY.strip('"\'')
@@ -10,28 +8,28 @@ host = settings.LANGFUSE_BASE_URL.strip('"\'')
 
 print("="*80)
 print("TESTING DIRECT LANGFUSE TRACE TRANSMISSION")
-print(f"Public Key:  {pub[:8]}...")
-print(f"Secret Key:  {sec[:8]}...")
+print(f"Public Key:  {pub[:12]}...")
+print(f"Secret Key:  {sec[:12]}...")
 print(f"Host URL:    {host}")
 print("="*80)
 
-handler = CallbackHandler(
-    public_key=pub,
-    secret_key=sec,
-    host=host
-)
+client = get_langfuse_client()
+if not client:
+    print("ERROR: Failed to initialize Langfuse client.")
+else:
+    print("1. Successfully initialized Langfuse client!")
 
-llm = ChatGroq(
-    model_name="llama-3.3-70b-versatile",
-    groq_api_key=settings.GROQ_API_KEY,
-    temperature=0.1
-)
+    print("\n2. Sending test trace to Langfuse Cloud...")
+    log_agent_trace(
+        trace_name="SMOA Mission Control Telemetry Audit",
+        agent_name="Diagnosis Agent (llama-3.3-70b-versatile)",
+        prompt="[TELEMETRY ANOMALY DETECTED] Battery_SOC: 14.5%, CPU_Temp: 58.2C",
+        output="Root Cause: Battery cell failure due to deep discharge.",
+        metadata={"subsystem": "Power", "status": "CRITICAL"}
+    )
 
-print("\nInvoking Groq LLM with Langfuse CallbackHandler attached...")
-response = llm.invoke("Hello Space Mission Control! Confirm connectivity.", config={"callbacks": [handler]})
-
-print(f"\nGroq Response: {response.content}")
-
-print("\nFlushing Langfuse event buffer to cloud server...")
-handler.flush()
-print("SUCCESS: Traces flushed to us.cloud.langfuse.com!")
+    print("\n3. Flushing trace buffer to us.cloud.langfuse.com...")
+    flush_langfuse()
+    print("\n" + "="*80)
+    print("SUCCESS: Trace sent and flushed! Open us.cloud.langfuse.com to see your trace.")
+    print("="*80)

@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from agentic.state import MissionGraphState
 from agentic.schemas.diagnosis_schema import DiagnosisOutput
 from agentic.prompts.diagnosis_prompt import DIAGNOSIS_SYSTEM_PROMPT
-from agentic.tracing import get_langfuse_callback
+from agentic.tracing import get_langfuse_callback, log_agent_trace
 from config import settings
 
 def run_diagnosis_agent(state: MissionGraphState) -> MissionGraphState:
@@ -64,6 +64,14 @@ def run_diagnosis_agent(state: MissionGraphState) -> MissionGraphState:
 
             parsed = json.loads(text)
             output = DiagnosisOutput(**parsed)
+
+            log_agent_trace(
+                trace_name="SMOA Mission Operations Anomaly Diagnosis",
+                agent_name="Diagnosis Agent (llama-3.3-70b-versatile)",
+                prompt=prompt_user_input,
+                output=output.model_dump(),
+                metadata={"failure_class": failure_class, "severity": output.severity}
+            )
         except Exception as e:
             print(f"[Diagnosis Agent LLM Warning] Groq LLM invocation fallback: {e}")
             output = _fallback_diagnosis(telemetry, failure_class)
