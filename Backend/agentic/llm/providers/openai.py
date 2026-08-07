@@ -44,7 +44,10 @@ class OpenAIProvider(BaseLLMProvider):
                 raw_text = res_data["choices"][0]["message"]["content"]
                 data = self.parse_json_response(raw_text)
                 data["provider"] = "openai"
-                return StandardLLMResponse(**data)
+                res_obj = StandardLLMResponse(**data)
+                self.log_trace(user_prompt, res_obj)
+                return res_obj
+
         except Exception as e:
             logger.error(f"[OpenAIProvider] Error: {e}")
             return self.create_fallback_response(

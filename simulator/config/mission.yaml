@@ -1,0 +1,15 @@
+mission_name: "SMOA-Helios-1"
+target_orbit: "LEO 520km Sun-Synchronous"
+orbit_altitude_km: 520.0
+orbit_inclination_deg: 97.5
+spacecraft_mass_kg: 180.0
+battery_capacity_ah: 40.0
+solar_panel_area_m2: 2.5
+payload_type: "Multispectral Camera Array"
+ground_stations:
+  - name: "SGS Svalbard"
+    lat: 78.22
+    lon: 15.65
+  - name: "Goldstone DSCC"
+    lat: 35.42
+    lon: -116.89

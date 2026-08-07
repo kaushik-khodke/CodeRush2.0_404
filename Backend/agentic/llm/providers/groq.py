@@ -44,7 +44,10 @@ class GroqProvider(BaseLLMProvider):
 
             data = self.parse_json_response(raw_text)
             data["provider"] = "groq"
-            return StandardLLMResponse(**data)
+            res_obj = StandardLLMResponse(**data)
+            self.log_trace(user_prompt, res_obj)
+            return res_obj
+
 
         except Exception as e:
             logger.error(f"[GroqProvider] Invocation error: {e}")

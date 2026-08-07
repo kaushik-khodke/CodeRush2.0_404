@@ -63,8 +63,10 @@ export function MissionPlanner() {
 
   // Fetch dynamic schedules & windows from backend API
   useEffect(() => {
-    fetch("/api/planner/schedules")
-      .then((res) => (res.ok ? res.json() : null))
+    const apiBase = (import.meta.env.VITE_BACKEND_URL as string) || "http://localhost:8000";
+
+    fetch(`${apiBase}/api/planner/schedules`)
+      .then((res) => (res.ok ? res.json() : fetch("/api/planner/schedules").then((r) => (r.ok ? r.json() : null))))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           const mapped: ActivityScheduleItem[] = data.map((d: any) => ({
@@ -89,8 +91,8 @@ export function MissionPlanner() {
       })
       .catch(() => {});
 
-    fetch("/api/planner/windows")
-      .then((res) => (res.ok ? res.json() : null))
+    fetch(`${apiBase}/api/planner/windows`)
+      .then((res) => (res.ok ? res.json() : fetch("/api/planner/windows").then((r) => (r.ok ? r.json() : null))))
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           const mapped: CommunicationWindowInfo[] = data.map((w: any) => ({
@@ -107,6 +109,7 @@ export function MissionPlanner() {
       })
       .catch(() => {});
   }, []);
+
 
   // Live Dynamic Telemetry Gauges
   const livePowerGeneration = latest?.power?.arrayPower ?? 410.0;
