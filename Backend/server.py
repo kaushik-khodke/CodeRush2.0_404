@@ -24,7 +24,8 @@ from predict_mission import predict_mission_telemetry
 from telemetry_ml.explainable_ai import MissionExplainableAI
 from train_mission_models import train_mission_pipeline
 
-
+from routers.websocket import ws_manager
+from routers import seeding
 
 CHECKPOINT_PATH = os.path.join(os.path.dirname(__file__), "checkpoints", "mission_models.pkl")
 DATASET_PATH = os.path.join(os.path.dirname(__file__), "Dataset", "mission_telemetry.csv")
@@ -38,6 +39,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(seeding.router)
 
 # Global ML Model Storage
 ml_assets: Dict[str, Any] = {}
@@ -283,16 +286,15 @@ def generate_telemetry_frame() -> Dict[str, Any]:
 # WebSocket Endpoint
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry(websocket: WebSocket):
-    await websocket.accept()
+    await ws_manager.connect(websocket)
     try:
         while True:
-            frame = generate_telemetry_frame()
-            await websocket.send_json(frame)
-            await asyncio.sleep(1.0)
+            # Keep socket open to receive client ping/messages
+            data = await websocket.receive_text()
     except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        await websocket.close()
+        ws_manager.disconnect(websocket)
+    except Exception:
+        ws_manager.disconnect(websocket)
 
 # REST Endpoints
 @app.get("/api/events")
