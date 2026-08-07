@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TelemetrySimulator } from "./mock";
+import { TelemetryDigitalTwin } from "./digitalTwin";
 import type { FaultInjection, LinkStatus, TelemetryFrame } from "./types";
 
 export const TELEMETRY_BUFFER = 300;
@@ -13,7 +14,7 @@ export const WINDOW_SECONDS = 60;
  *
  * TODO(backend): drop the simulator fallback once /ws/telemetry is live.
  */
-export function useTelemetry(faults: FaultInjection[]) {
+export function useTelemetry(faults: FaultInjection[], source: "simulator" | "digital-twin" = "simulator") {
   const [status, setStatus] = useState<LinkStatus>("connecting");
   const [history, setHistory] = useState<TelemetryFrame[]>([]);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -38,14 +39,15 @@ export function useTelemetry(faults: FaultInjection[]) {
       if (cancelled || interval) return;
       setLastError(reason);
       setStatus("degraded");
-      const sim = new TelemetrySimulator();
+      const generator =
+        source === "digital-twin" ? new TelemetryDigitalTwin() : new TelemetrySimulator();
       for (let i = 0; i < WINDOW_SECONDS; i += 1) {
-        sim.setFaults(faultsRef.current);
-        push(sim.next());
+        generator.setFaults(faultsRef.current);
+        push(generator.next());
       }
       interval = setInterval(() => {
-        sim.setFaults(faultsRef.current);
-        push(sim.next());
+        generator.setFaults(faultsRef.current);
+        push(generator.next());
       }, 1000);
     };
 
@@ -146,7 +148,7 @@ export function useTelemetry(faults: FaultInjection[]) {
         supabaseChannel.unsubscribe();
       }
     };
-  }, [push]);
+  }, [push, source]);
 
   const latest = history.length > 0 ? history[history.length - 1]! : null;
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, WifiOff } from "lucide-react";
 import { TopBar } from "@/components/smoa/TopBar";
@@ -32,9 +33,10 @@ export const Route = createFileRoute("/")({
 });
 
 function OperationsConsole() {
-  const [faults] = useState<FaultInjection[]>([]);
+  const [faults, setFaults] = useState<FaultInjection[]>([]);
   const [agents] = useState(() => mockAgents());
   const [selectedAgentId, setSelectedAgentId] = useState("telemetry_monitor");
+  const [telemetrySource, setTelemetrySource] = useState<"simulator" | "digital-twin">("simulator");
 
   const [events, setEvents] = useState<AnomalyEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -44,6 +46,8 @@ function OperationsConsole() {
   const [commandsLoading, setCommandsLoading] = useState(true);
   const [commandsError, setCommandsError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const { status, history, latest, lastError } = useTelemetry(faults, telemetrySource);
 
   const loadEvents = useCallback(() => {
     setEventsLoading(true);
@@ -122,7 +126,17 @@ function OperationsConsole() {
       <div className="flex items-center gap-3 border-t border-border bg-surface px-4 py-1.5">
         <span className="label-tech">Console UTC {latest ? formatClock(latest.t) : "--:--:--"}</span>
         <span className="label-tech">Buffer {history.length}/300 frames</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[0.75rem] text-muted-foreground">Simulation mode</span>
+          <Select value={telemetrySource} onValueChange={(value) => setTelemetrySource(value as "simulator" | "digital-twin")}>
+            <SelectTrigger className="h-8 w-[170px] border-border bg-background text-[0.75rem]">
+              <SelectValue placeholder="Telemetry source" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="simulator">Simulator</SelectItem>
+              <SelectItem value="digital-twin">Digital Twin</SelectItem>
+            </SelectContent>
+          </Select>
           <FaultInjectionPanel faults={faults} onChange={setFaults} />
         </div>
       </div>
