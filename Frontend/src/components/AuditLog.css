@@ -1,0 +1,49 @@
+.audit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.audit__label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.audit__track {
+  display: flex;
+  gap: 22px;
+}
+
+.audit__entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.audit__t {
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.audit__actor {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.audit__note-text {
+  font-style: italic;
+  color: var(--accent-violet);
+  margin-left: 6px;
+  opacity: 0.85;
+}

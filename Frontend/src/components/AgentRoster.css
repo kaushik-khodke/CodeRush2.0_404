@@ -1,0 +1,96 @@
+.roster {
+  background: var(--bg-panel);
+  border-right: 1px solid var(--line);
+  padding: 18px 14px;
+  overflow-y: auto;
+}
+
+.roster__heading {
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+  padding: 0 4px;
+}
+
+.roster__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roster__card {
+  text-align: left;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  cursor: pointer;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.roster__card:hover {
+  border-color: var(--line-bright);
+}
+
+.roster__card--selected {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 1px rgba(79, 216, 200, 0.25);
+}
+
+.roster__card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.roster__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.roster__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+
+.roster__status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.roster__role {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 9px;
+}
+
+.roster__confidence-track {
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.roster__confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
+}
+
+.roster__last-action {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
