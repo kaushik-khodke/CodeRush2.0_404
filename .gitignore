@@ -57,22 +57,9 @@ ENV/
 __pycache__/
 *.py[cod]
 *$py.class
-checkpoints/
-*.pth
-*.pkl
 
-<<<<<<< HEAD
-# Heavy Datasets & Model Assets
-Dataset/data/data/
-Backend/Dataset/data/data/
-*.npy
-*.csv
-!Backend/Dataset/README.md
-=======
-# Heavy Binary Datasets & Models
-Dataset/data/data/
-*.npy
-========
+
+
 
 .agents
 >>>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f:.gitignore
