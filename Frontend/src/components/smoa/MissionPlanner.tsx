@@ -63,8 +63,12 @@ export function MissionPlanner() {
 
   // Fetch dynamic schedules & windows from backend API with 2s live polling
   useEffect(() => {
+    const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://localhost:8000"
+      : "";
+
     const loadPlannerData = () => {
-      fetch("/api/planner/schedules")
+      fetch(`${apiBase}/api/planner/schedules`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (Array.isArray(data)) {
@@ -90,7 +94,7 @@ export function MissionPlanner() {
         })
         .catch(() => {});
 
-      fetch("/api/planner/windows")
+      fetch(`${apiBase}/api/planner/windows`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
@@ -207,8 +211,12 @@ export function MissionPlanner() {
       selectionRationale: `User-scheduled for ${timeFormatted} UTC. Net surplus (${netPowerSurplus >= 0 ? "+" : ""}${netPowerSurplus.toFixed(0)}W) verified feasible.`,
     };
 
+    const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://localhost:8000"
+      : "";
+
     // Post to backend API to insert into Supabase
-    fetch("/api/planner/activities", {
+    fetch(`${apiBase}/api/planner/activities`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

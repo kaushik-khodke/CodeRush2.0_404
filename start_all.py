@@ -98,9 +98,12 @@ def main():
 
     # 3. Main Frontend Console (Port 5173)
     log("FRONTEND", "Starting Main Mission Console on http://localhost:5173...", "34")
+    frontend_env = os.environ.copy()
+    frontend_env["NODE_OPTIONS"] = "--max-old-space-size=4096"
     p_frontend = subprocess.Popen(
         ["npm", "run", "dev"],
         cwd=FRONTEND_DIR,
+        env=frontend_env,
         shell=True
     )
     processes.append((p_frontend, "Main Frontend Console"))
@@ -110,6 +113,7 @@ def main():
     p_seeding = subprocess.Popen(
         ["npm", "run", "dev:seeding"],
         cwd=FRONTEND_DIR,
+        env=frontend_env,
         shell=True
     )
     processes.append((p_seeding, "Data Seeding Controller"))

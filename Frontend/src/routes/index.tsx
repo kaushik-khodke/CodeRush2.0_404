@@ -14,6 +14,7 @@ import { useTelemetry } from "@/lib/smoa/useTelemetry";
 import type { AnomalyEvent, FaultInjection, PendingCommand } from "@/lib/smoa/types";
 import { mockAgents } from "@/lib/smoa/mock";
 import { AgentRoster } from "@/components/smoa/AgentRoster";
+import { MultiAgentConsensusPanel } from "@/components/smoa/MultiAgentConsensusPanel";
 
 const title = "ORION AI — Mission Operations Control";
 const description =
@@ -186,8 +187,13 @@ function OperationsConsole() {
         <EventFeed events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} />
       </main>
 
+      {/* Multi-Agent AI Consensus Engine & Telemetry Plan Advisory Section */}
+      <section className="px-4 pt-4">
+        <MultiAgentConsensusPanel latest={latest} events={events} commands={commands} />
+      </section>
+
       {/* Human Approval Queue Section */}
-      <section className="px-4 py-4 border-t border-border/60 bg-surface/30">
+      <section className="px-4 py-4 bg-surface/30">
         <ApprovalQueue
           commands={commands}
           loading={commandsLoading}

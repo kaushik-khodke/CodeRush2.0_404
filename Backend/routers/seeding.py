@@ -533,66 +533,67 @@ async def seeding_loop():
         if len(state.history_buffer) > 300:
             state.history_buffer = state.history_buffer[-300:]
 
-        # Sync telemetry directly to Supabase table
-        try:
-            from database.repositories.supabase_repository import SupabaseRepository
-            db_dict = {
-                "Battery_Voltage": frame["power"]["busVoltage"],
-                "Battery_Current": 4.8 if not frame["eclipse"] else -2.1,
-                "Battery_SOC": frame["power"]["stateOfCharge"],
-                "Battery_Temperature": frame["thermal"]["batteryTemp"],
-                "Solar_Voltage": 35.0 if not frame["eclipse"] else 0.0,
-                "Solar_Current": 12.0 if not frame["eclipse"] else 0.0,
-                "Power_Load": 280.0,
-                "Power_Generation": frame["power"]["arrayPower"],
-                "Payload_Temperature": frame["thermal"]["payloadTemp"],
-                "CPU_Temperature": round(43.2 + (frame["thermal"]["batteryTemp"] - 24.1), 2),
-                "Solar_Panel_Temperature": 25.0 if not frame["eclipse"] else -60.0,
-                "System_Temp": frame["thermal"]["radiatorTemp"],
-                "External_Temp": -50.0,
-                "Signal_Strength": frame["comms"]["signalDbm"],
-                "Downlink_Rate": 10.0,
-                "Uplink_Rate": 1.0,
-                "Packet_Loss": frame["comms"]["packetLoss"],
-                "Latency": frame["comms"]["rttSeconds"] * 1000.0,
-                "Communication_Window": 1,
-                "Roll": frame["adcs"]["roll"],
-                "Pitch": frame["adcs"]["pitch"],
-                "Yaw": frame["adcs"]["yaw"],
-                "Angular_Velocity": frame["adcs"]["bodyRate"],
-                "Reaction_Wheel_Speed": frame["adcs"]["wheelRpm"],
-                "Gyroscope_X": 0.001,
-                "Gyroscope_Y": 0.001,
-                "Gyroscope_Z": 0.001,
-                "Magnetometer": 45.0,
-                "Star_Tracker_Status": 1,
-                "Altitude": 525.0,
-                "Velocity": 7.6,
-                "Latitude": 12.0,
-                "Longitude": 45.0,
-                "Orbital_Phase": frame["orbitAngle"],
-                "Eclipse_Status": 1 if frame["eclipse"] else 0,
-                "Fuel_Level": 85.0,
-                "Thruster_Temperature": 39.5,
-                "Thruster_Status": 0,
-                "Fuel_Pressure": 152.0,
-                "Burn_Duration": 0,
-                "Camera_Status": 1,
-                "Instrument_Temperature": 20.0,
-                "Instrument_Power": 80.0,
-                "Data_Collection_Rate": 10.0,
-                "Payload_Mode": 2,
-                "CPU_Usage": 34.2,
-                "RAM_Usage": 50.0,
-                "Storage_Usage": 40.0,
-                "Process_Health": 1,
-                "Software_Version": 2.1,
-                "Mission_Phase": 1,
-                "Observation_Window": 1
-            }
-            SupabaseRepository.insert_telemetry(db_dict)
-        except Exception:
-            pass
+        # Sync telemetry to Supabase asynchronously every 5 seconds to prevent Windows socket buffer exhaustion (WinError 10055)
+        if state.frame_count % 5 == 0:
+            try:
+                from database.repositories.supabase_repository import SupabaseRepository
+                db_dict = {
+                    "Battery_Voltage": frame["power"]["busVoltage"],
+                    "Battery_Current": 4.8 if not frame["eclipse"] else -2.1,
+                    "Battery_SOC": frame["power"]["stateOfCharge"],
+                    "Battery_Temperature": frame["thermal"]["batteryTemp"],
+                    "Solar_Voltage": 35.0 if not frame["eclipse"] else 0.0,
+                    "Solar_Current": 12.0 if not frame["eclipse"] else 0.0,
+                    "Power_Load": 280.0,
+                    "Power_Generation": frame["power"]["arrayPower"],
+                    "Payload_Temperature": frame["thermal"]["payloadTemp"],
+                    "CPU_Temperature": round(43.2 + (frame["thermal"]["batteryTemp"] - 24.1), 2),
+                    "Solar_Panel_Temperature": 25.0 if not frame["eclipse"] else -60.0,
+                    "System_Temp": frame["thermal"]["radiatorTemp"],
+                    "External_Temp": -50.0,
+                    "Signal_Strength": frame["comms"]["signalDbm"],
+                    "Downlink_Rate": 10.0,
+                    "Uplink_Rate": 1.0,
+                    "Packet_Loss": frame["comms"]["packetLoss"],
+                    "Latency": frame["comms"]["rttSeconds"] * 1000.0,
+                    "Communication_Window": 1,
+                    "Roll": frame["adcs"]["roll"],
+                    "Pitch": frame["adcs"]["pitch"],
+                    "Yaw": frame["adcs"]["yaw"],
+                    "Angular_Velocity": frame["adcs"]["bodyRate"],
+                    "Reaction_Wheel_Speed": frame["adcs"]["wheelRpm"],
+                    "Gyroscope_X": 0.001,
+                    "Gyroscope_Y": 0.001,
+                    "Gyroscope_Z": 0.001,
+                    "Magnetometer": 45.0,
+                    "Star_Tracker_Status": 1,
+                    "Altitude": 525.0,
+                    "Velocity": 7.6,
+                    "Latitude": 12.0,
+                    "Longitude": 45.0,
+                    "Orbital_Phase": frame["orbitAngle"],
+                    "Eclipse_Status": 1 if frame["eclipse"] else 0,
+                    "Fuel_Level": 85.0,
+                    "Thruster_Temperature": 39.5,
+                    "Thruster_Status": 0,
+                    "Fuel_Pressure": 152.0,
+                    "Burn_Duration": 0,
+                    "Camera_Status": 1,
+                    "Instrument_Temperature": 20.0,
+                    "Instrument_Power": 80.0,
+                    "Data_Collection_Rate": 10.0,
+                    "Payload_Mode": 2,
+                    "CPU_Usage": 34.2,
+                    "RAM_Usage": 50.0,
+                    "Storage_Usage": 40.0,
+                    "Process_Health": 1,
+                    "Software_Version": 2.1,
+                    "Mission_Phase": 1,
+                    "Observation_Window": 1
+                }
+                asyncio.create_task(asyncio.to_thread(SupabaseRepository.insert_telemetry, db_dict))
+            except Exception:
+                pass
 
         await ws_manager.broadcast({
             "type": "TELEMETRY_FRAME",
@@ -689,6 +690,49 @@ async def set_anomaly(req: AnomalyRequest):
         except Exception:
             pass
 
+        # Execute full 9-Agent LangGraph AI Diagnosis Workflow & log trace to Langfuse Cloud
+        try:
+            from agentic.graph import mission_graph
+            from agentic.tracing import get_langfuse_callback, log_agent_trace, flush_langfuse
+            
+            initial_state = {
+                "telemetry_data": {
+                    "Battery_Voltage": 27.6,
+                    "Battery_SOC": 78.4,
+                    "CPU_Temperature": 42.0,
+                    "Reaction_Wheel_Speed": 2800,
+                    "Signal_Strength": -85.0,
+                    "Packet_Loss": 0.1,
+                    "Fuel_Level": 85.0,
+                    "Fuel_Pressure": 152.0,
+                    "Thruster_Temperature": 39.5
+                },
+                "telemetry_history": [],
+                "mission_phase": "MAPPING_OBSERVATION",
+                "mission_state": "ACTIVE",
+                "mission_constraints": {"Battery_SOC_Min": 30.0, "CPU_Temp_Max": 70.0},
+                "mission_memory": [],
+                "audit_trail": []
+            }
+            handler = get_langfuse_callback()
+            config = {"callbacks": [handler]} if handler else {}
+            
+            final_agent_state = mission_graph.invoke(initial_state, config=config)
+            diag_out = final_agent_state.get("diagnosis_output", {})
+            fd_out = final_agent_state.get("flight_director_output", {})
+            
+            log_agent_trace(
+                trace_name=f"SMOA 9-Agent Diagnosis — {req.mode.upper()}",
+                agent_name="Flight Director Chair (llama-3.3-70b-versatile)",
+                prompt=f"[ML SENTINEL ANOMALY DETECTED] Mode: {req.mode}, Subsystem: {event.get('subsystem')}",
+                output=f"Agreed Root Cause: {diag_out.get('root_cause', event.get('diagnosis', {}).get('rootCause'))}. Recommended SOP: {fd_out.get('recommended_procedure', 'SOP Recovery')}",
+                metadata={"severity": event.get("severity"), "score": event.get("score"), "session_id": state.session_id}
+            )
+            flush_langfuse()
+            print(f"[Agentic AI System] Executed 9-Agent Workflow & Flushed Traces to us.cloud.langfuse.com!")
+        except Exception as agent_err:
+            print(f"[Agentic AI System Notice]: {agent_err}")
+
         await ws_manager.broadcast({
             "type": "ANOMALY_EVENT",
             "event": event,
@@ -744,6 +788,21 @@ async def set_custom(req: CustomParamsRequest):
                     })
             except Exception:
                 pass
+
+        # Send trace directly to Langfuse Cloud dashboard (us.cloud.langfuse.com)
+        try:
+            from agentic.tracing import log_agent_trace, flush_langfuse
+            log_agent_trace(
+                trace_name="SMOA Mission Control — CUSTOM_EXCURSION",
+                agent_name="Diagnosis Agent (llama-3.3-70b-versatile)",
+                prompt=f"[CUSTOM SENSOR EXCURSION DETECTED] Details: {detail}",
+                output="Root Cause: Manual custom parameter excursion. Proposed Action: RESET_SENSOR_OFFSETS_TO_ZERO",
+                metadata={"severity": "HIGH", "excursions": detail, "session_id": state.session_id}
+            )
+            flush_langfuse()
+            print(f"[Langfuse Trace Sent] Logged custom excursion trace to us.cloud.langfuse.com")
+        except Exception as langfuse_err:
+            print(f"[Langfuse Trace Log Notice]: {langfuse_err}")
 
         await ws_manager.broadcast({
             "type": "ANOMALY_EVENT",

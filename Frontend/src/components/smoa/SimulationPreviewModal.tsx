@@ -30,7 +30,11 @@ export function SimulationPreviewModal({
     if (!commandItem) return;
     setLoading(true);
 
-    fetch("/api/digital-twin/simulate", {
+    const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://localhost:8000"
+      : "";
+
+    fetch(`${apiBase}/api/digital-twin/simulate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

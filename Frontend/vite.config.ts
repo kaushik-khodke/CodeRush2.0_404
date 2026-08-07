@@ -13,6 +13,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    ssr: {
+      external: ["three", "@react-three/fiber", "@react-three/drei"],
+    },
     server: {
       port: 5173,
       strictPort: true,
