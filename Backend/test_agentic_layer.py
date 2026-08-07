@@ -30,7 +30,7 @@ def test_nominal_flow():
         "mission_state": "ACTIVE",
         "mission_constraints": {"Battery_SOC_Min": 30.0, "CPU_Temp_Max": 70.0},
         "mission_memory": [],
-        "audit_trail": []
+        "audit_logs": []
     }
 
     res = mission_graph.invoke(initial_state)
@@ -38,12 +38,11 @@ def test_nominal_flow():
     print(f"  -> Is Anomaly Detected?      {res.get('is_anomaly')}")
     print(f"  -> ML Sentinel Output:       {res.get('ml_output')}")
     print(f"  -> Telemetry Quality Score:  {res.get('telemetry_monitor_output', {}).get('data_quality_score')}")
-    print(f"  -> Planner Tasks Scheduled:  {len(res.get('planner_output', {}).get('schedule', []))}")
     print(f"  -> Diagnosis Triggered?     {'Yes' if res.get('diagnosis_output') else 'No (Bypassed cleanly for nominal telemetry)'}")
 
 def test_anomaly_agentic_flow():
     print("\n" + "="*80)
-    print("      TEST 2: ANOMALY AGENTIC PIPELINE FLOW (GROQ LLM + RAG + WARDEN)")
+    print("      TEST 2: HYBRID AGENTIC PIPELINE (ML SENTINEL + LLM FACTORY + CONSENSUS + TRUST + WARDEN)")
     print("="*80)
 
     # Battery Failure Anomaly Payload
@@ -68,32 +67,28 @@ def test_anomaly_agentic_flow():
         "mission_state": "ACTIVE",
         "mission_constraints": {"Battery_SOC_Min": 30.0, "CPU_Temp_Max": 70.0},
         "mission_memory": [],
-        "audit_trail": []
+        "audit_logs": []
     }
 
-    from agentic.tracing import get_langfuse_callback
-    handler = get_langfuse_callback()
-    config = {"callbacks": [handler]} if handler else {}
+    res = mission_graph.invoke(initial_state)
 
-    res = mission_graph.invoke(initial_state, config=config)
+    print(f"\n[1] ML Sentinel Output:          {res.get('ml_output')}")
+    print(f"\n[2] Multi-LLM Providers Responded: {len(res.get('llm_responses', []))}")
+    print(f"\n[3] Consensus Engine Result:    Status: {res.get('consensus_output', {}).get('consensus_status')} | Ratio: {res.get('consensus_output', {}).get('agreement_ratio')*100:.0f}%")
+    print(f"                                Explanation: {res.get('consensus_output', {}).get('consensus_explanation')}")
+    print(f"\n[4] Trust Engine Composite Score: {res.get('trust_evaluation', {}).get('trust_score')}/100 -> Gate Decision: {res.get('trust_evaluation', {}).get('decision_gate')}")
+    print(f"\n[5] Diagnosis Agent Output:       Root Cause: {res.get('diagnosis_output', {}).get('root_cause')}")
+    print(f"                                Severity:   {res.get('diagnosis_output', {}).get('severity')}")
+    print(f"\n[6] Archivist Agent (RAG):       Active SOP: {res.get('archivist_output', {}).get('active_sop')}")
+    print(f"\n[7] Future Digital Twin Sim:     Prob:       {res.get('simulation_output', {}).get('success_probability')*100:.1f}% | Pass: {res.get('simulation_output', {}).get('simulation_passed')}")
+    print(f"\n[8] Mission Planner (OR-Tools):  Power Alloc:{res.get('planner_output', {}).get('optimized_power_load_w')}W | Next AOS: {res.get('planner_output', {}).get('next_contact_window')}")
+    print(f"\n[9] Flight Director Card:       Recommendation: {res.get('flight_director_output', {}).get('primary_recommendation')}")
+    print(f"\n[10] Safety & Security Audit:   Status:     {res.get('safety_output', {}).get('security_status')} | Threat: {res.get('safety_output', {}).get('threat_level')} | Signature: {res.get('safety_output', {}).get('security_signature')}")
+    print(f"\n[11] Warden Safety Gate:        Status:     {res.get('approval_status')}")
+    print(f"                                Queued CMD: {res.get('warden_output', {}).get('queued_command_id')} (Auto-Execution: {res.get('warden_output', {}).get('execution_allowed')})")
 
-    print(f"\n[1] ML Sentinel Output:      {res.get('ml_output')}")
-    print(f"\n[2] Diagnosis Agent Output:   Root Cause: {res.get('diagnosis_output', {}).get('root_cause')}")
-    print(f"                            Severity:   {res.get('diagnosis_output', {}).get('severity')}")
-    print(f"\n[3] Archivist Agent (RAG):   Top SOP:    {res.get('archivist_output', {}).get('top_recommended_sop')}")
-    print(f"\n[4] Digital Twin Simulator: Expected:   {res.get('simulation_output', {}).get('expected_outcome')}")
-    print(f"                            Prob:       {res.get('simulation_output', {}).get('success_probability')*100:.1f}%")
-    print(f"\n[5] Mission Continuation:   Recoverable:{res.get('continuation_output', {}).get('is_recoverable')}")
-    print(f"\n[6] Flight Director Card:   Procedure:  {res.get('flight_director_output', {}).get('recommended_procedure')}")
-    print(f"                            Summary:    {res.get('flight_director_output', {}).get('summary')}")
-    print(f"\n[7] Warden Safety Gate:     Status:     {res.get('approval_status')}")
-    print(f"                            Summary:    {res.get('warden_output', {}).get('safety_summary')}")
     print("\n" + "="*80 + "\n")
 
 if __name__ == "__main__":
-    from agentic.tracing import flush_langfuse
     test_nominal_flow()
     test_anomaly_agentic_flow()
-    print("\nFlushing trace events to Langfuse Cloud...")
-    flush_langfuse()
-    print("Done! Check us.cloud.langfuse.com for traces.")

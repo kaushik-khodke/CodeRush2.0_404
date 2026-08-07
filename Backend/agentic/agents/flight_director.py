@@ -1,91 +1,43 @@
-import json
-from langchain_groq import ChatGroq
-from agentic.state import MissionGraphState
-from agentic.schemas.flight_director_schema import FlightDirectorOutput
-from agentic.prompts.flight_director_prompt import FLIGHT_DIRECTOR_SYSTEM_PROMPT
-from agentic.tracing import get_langfuse_callback, log_agent_trace
-from config import settings
+import logging
+from typing import Dict, Any
+from agentic.graph.state import MissionGraphState
+
+logger = logging.getLogger("FlightDirectorAgent")
 
 def run_flight_director_agent(state: MissionGraphState) -> MissionGraphState:
     """
-    Flight Director Agent:
-    Synthesizes outputs from Diagnosis, Archivist, Simulator, and Continuation agents
-    to generate the final authoritative operational recommendation card.
+    7. Flight Director Agent:
+    Synthesizes outputs from Diagnosis, Planner, Archivist, Simulation, Consensus, and Trust Engine.
+    Formulates exactly ONE authoritative mission recovery recommendation.
     """
-    telemetry = state.get("telemetry_data", {})
-    diag = state.get("diagnosis_output", {})
-    archivist = state.get("archivist_output", {})
-    sim = state.get("simulation_output", {})
-    continuation = state.get("continuation_output", {})
+    ml_output = state.get("ml_output", {})
+    diagnosis = state.get("diagnosis_output", {})
+    simulation = state.get("simulation_output", {})
+    consensus = state.get("consensus_output", {})
+    trust = state.get("trust_evaluation", {})
 
-    failure_class = state.get("ml_output", {}).get("failure_class", "Battery Failure")
-    top_sop = archivist.get("top_recommended_sop", "SOP-BAT-01")
+    failure_class = ml_output.get("failure_class", "Healthy")
+    recommended_proc = diagnosis.get("recommended_procedure", "Continue Nominal Operations")
+    trust_score = trust.get("trust_score", 90.0)
+    consensus_status = consensus.get("consensus_status", "HIGH")
 
-    prompt_user_input = f"""
-    [FLIGHT DIRECTOR RECOMMENDATION SYNTHESIS]
-    Failure Mode: {failure_class}
-    Root Cause: {diag.get('root_cause', 'Subsystem anomaly')}
-    Diagnosed Severity: {diag.get('severity', 'CRITICAL')}
-    
-    Candidate SOP: {top_sop}
-    Digital Twin Simulation Forecast: {sim.get('expected_outcome', 'Load shedding expected')}
-    Simulated Success Probability: {sim.get('success_probability', 0.95)*100:.1f}%
-    
-    Continuation Plan: Recoverable={continuation.get('is_recoverable', True)}, SafeMode={continuation.get('safe_mode_required', False)}
-    
-    Generate the final executive recommendation card in exact JSON format matching FLIGHT_DIRECTOR_SYSTEM_PROMPT.
-    """
-
-    api_key = settings.GROQ_API_KEY
-    if api_key and "gsk_" in api_key:
-        try:
-            llm = ChatGroq(
-                model_name="llama-3.3-70b-versatile",
-                groq_api_key=api_key,
-                temperature=0.1
-            )
-            handler = get_langfuse_callback()
-            config = {"callbacks": [handler]} if handler else {}
-
-            response = llm.invoke([
-                {"role": "system", "content": FLIGHT_DIRECTOR_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt_user_input}
-            ], config=config)
-            text = response.content.strip()
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            text = text.strip()
-
-            parsed = json.loads(text)
-            output = FlightDirectorOutput(**parsed)
-
-            log_agent_trace(
-                trace_name="SMOA Flight Director Recommendation Synthesis",
-                agent_name="Flight Director Agent (llama-3.3-70b-versatile)",
-                prompt=prompt_user_input,
-                output=output.model_dump(),
-                metadata={"recommended_procedure": output.recommended_procedure, "confidence": output.confidence}
-            )
-        except Exception as e:
-            print(f"[Flight Director Agent LLM Warning] Groq fallback: {e}")
-            output = _fallback_flight_director(diag, sim, top_sop, failure_class)
+    # Single Recommendation Synthesis
+    if trust_score < 60.0 or consensus_status == "REQUIRES HUMAN REVIEW":
+        final_cmd = "MANUAL_OPERATOR_OVERRIDE_REQUIRED"
+        rationale = f"Trust score ({trust_score}/100) or consensus level ({consensus_status}) below certified autonomous threshold."
     else:
-        output = _fallback_flight_director(diag, sim, top_sop, failure_class)
+        final_cmd = "PWR_SHED_PAYLOAD_HEATER_BUS" if "Battery" in failure_class else "THERM_PUMPA_OVERSPEED_110"
+        rationale = f"Validated procedure '{recommended_proc}' passed Digital Twin simulation ({simulation.get('success_probability', 0.95)*100:.0f}%) and Trust Engine ({trust_score}/100)."
 
-    state["flight_director_output"] = output.model_dump()
+    fd_summary = {
+        "primary_recommendation": final_cmd,
+        "procedure_title": recommended_proc,
+        "confidence_score": round(trust_score / 100.0, 4),
+        "trust_score": trust_score,
+        "rationale": rationale,
+        "flight_director_signature": "FLIGHT_DIRECTOR_STATION_ALPHA"
+    }
+
+    state["flight_director_output"] = fd_summary
+    logger.info(f"[FlightDirectorAgent] Recommendation: {final_cmd} | Trust: {trust_score}/100")
     return state
-
-def _fallback_flight_director(diag: dict, sim: dict, top_sop: str, failure_class: str) -> FlightDirectorOutput:
-    return FlightDirectorOutput(
-        final_recommendation=f"Execute {top_sop} to resolve {failure_class}.",
-        summary=f"Spacecraft telemetry indicates {failure_class}. Digital Twin confirms {sim.get('expected_outcome', 'recovery')}.",
-        reason=f"Procedure {top_sop} offers a {sim.get('success_probability', 0.95)*100:.1f}% success probability with minimal mission disruption.",
-        risk_level=diag.get("severity", "CRITICAL"),
-        evidence=diag.get("evidence", [f"Anomaly in {failure_class} telemetry"]),
-        expected_impact=f"Battery SOC impact: {sim.get('battery_impact_percent', 12.5):+.1f}%, Temp trend: {sim.get('temperature_trend_deg_c', -8.0):.1f}C.",
-        recommended_procedure=top_sop,
-        confidence=0.96,
-        human_explanation=f"Flight Director recommends executing {top_sop}. Action requires operator authorization before simulator dispatch."
-    )

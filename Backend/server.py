@@ -411,6 +411,36 @@ def authorize_command(id: str, req: AuthorizationRequest):
             return {"id": id, "state": c["state"]}
     raise HTTPException(status_code=404, detail="Command ID not found")
 
+@app.post("/api/agentic/evaluate")
+def evaluate_agentic_workflow(telemetry_frame: Dict[str, Any]):
+    """
+    Triggers full Multi-Agent Hybrid Workflow across ML Sentinel, Multi-LLM Factory, Consensus, Trust Engine, and Warden Safety Gate.
+    """
+    from agentic.graph import mission_graph
+    initial_state = {
+        "telemetry_data": telemetry_frame,
+        "telemetry_history": [telemetry_frame],
+        "mission_phase": "MAPPING_OBSERVATION",
+        "mission_state": "ACTIVE",
+        "mission_constraints": {"Battery_SOC_Min": 30.0, "CPU_Temp_Max": 70.0},
+        "mission_memory": [],
+        "audit_logs": []
+    }
+    result = mission_graph.invoke(initial_state)
+    return {
+        "is_anomaly": result.get("is_anomaly", False),
+        "ml_output": result.get("ml_output"),
+        "consensus": result.get("consensus_output"),
+        "trust": result.get("trust_evaluation"),
+        "diagnosis": result.get("diagnosis_output"),
+        "flight_director": result.get("flight_director_output"),
+        "safety": result.get("safety_output"),
+        "warden": result.get("warden_output"),
+        "queued_commands": result.get("approval_queue", [])
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+
