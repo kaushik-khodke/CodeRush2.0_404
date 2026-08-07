@@ -1,0 +1,12 @@
+{
+  "name": "coderush-mission-control",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "start": "python start_all.py",
+    "dev:all": "python start_all.py",
+    "backend": "cd backend && python main.py",
+    "frontend": "cd frontend && npm run dev",
+    "seeding": "cd frontend && npm run dev:seeding"
+  }
+}

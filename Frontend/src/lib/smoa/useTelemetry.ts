@@ -1,24 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { TelemetrySimulator } from "./mock";
-import type { FaultInjection, LinkStatus, TelemetryFrame } from "./types";
+import { useCallback, useEffect, useState } from "react";
+import type { AnomalyEvent, FaultInjection, LinkStatus, PendingCommand, TelemetryFrame } from "./types";
 
 export const TELEMETRY_BUFFER = 300;
 export const WINDOW_SECONDS = 60;
 
 /**
- * Opens a WebSocket to /ws/telemetry and parses 1 Hz frames into typed state.
- * If the socket cannot be established (no backend yet) the hook degrades to a
- * local simulator and reports `degraded` so the operator is never shown a
- * silently frozen console.
- *
- * TODO(backend): drop the simulator fallback once /ws/telemetry is live.
+ * Connects to the backend WebSocket stream (/ws/telemetry) to receive live spacecraft telemetry.
+ * Restores telemetry history from backend on page reload so the console never resets to empty on browser reload.
  */
-export function useTelemetry(faults: FaultInjection[]) {
+export function useTelemetry(
+  _faults?: FaultInjection[],
+  onAnomalyEvent?: (evt: AnomalyEvent) => void,
+  onPendingCommand?: (cmd: PendingCommand) => void
+) {
   const [status, setStatus] = useState<LinkStatus>("connecting");
   const [history, setHistory] = useState<TelemetryFrame[]>([]);
   const [lastError, setLastError] = useState<string | null>(null);
-  const faultsRef = useRef(faults);
-  faultsRef.current = faults;
 
   const push = useCallback((frame: TelemetryFrame) => {
     setHistory((prev) => {
@@ -28,72 +25,85 @@ export function useTelemetry(faults: FaultInjection[]) {
     });
   }, []);
 
+  // Restore history on load
+  useEffect(() => {
+    fetch("/api/seeding/history")
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error("Failed to fetch history");
+      })
+      .then((data) => {
+        if (data && Array.isArray(data.history) && data.history.length > 0) {
+          setHistory(data.history);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     let socket: WebSocket | null = null;
-    let interval: ReturnType<typeof setInterval> | null = null;
-    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
-    const startSimulator = (reason: string) => {
-      if (cancelled || interval) return;
-      setLastError(reason);
-      setStatus("degraded");
-      const sim = new TelemetrySimulator();
-      for (let i = 0; i < WINDOW_SECONDS; i += 1) {
-        sim.setFaults(faultsRef.current);
-        push(sim.next());
+    const connectWebSocket = () => {
+      if (cancelled) return;
+      try {
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const host = window.location.host;
+        socket = new WebSocket(`${proto}//${host}/ws/telemetry`);
+
+        socket.onopen = () => {
+          setLastError(null);
+          setStatus("live");
+        };
+
+        socket.onmessage = (evt) => {
+          try {
+            const parsed = JSON.parse(evt.data as string);
+            if (parsed.type === "TELEMETRY_FRAME" && parsed.frame) {
+              push(parsed.frame as TelemetryFrame);
+            } else if (parsed.type === "ANOMALY_EVENT") {
+              if (parsed.event && onAnomalyEvent) {
+                onAnomalyEvent(parsed.event as AnomalyEvent);
+              }
+              if (parsed.command && onPendingCommand) {
+                onPendingCommand(parsed.command as PendingCommand);
+              }
+            } else if (parsed.met && parsed.power) {
+              push(parsed as TelemetryFrame);
+            }
+          } catch {
+            setLastError("Malformed telemetry frame discarded.");
+          }
+        };
+
+        socket.onerror = () => {
+          setStatus("degraded");
+          setLastError("Telemetry backend socket error. Ensure backend is running and seeding is started on Port 5174.");
+        };
+
+        socket.onclose = () => {
+          if (!cancelled) {
+            setStatus("degraded");
+            setLastError("Awaiting stream. Start data seeding on Seeding Controller Page (http://localhost:5174).");
+            setTimeout(connectWebSocket, 3000);
+          }
+        };
+      } catch (err) {
+        setStatus("degraded");
+        setLastError("Unable to connect to telemetry backend.");
       }
-      interval = setInterval(() => {
-        sim.setFaults(faultsRef.current);
-        push(sim.next());
-      }, 1000);
     };
 
-    try {
-      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-      socket = new WebSocket(`${proto}//${window.location.host}/ws/telemetry`);
-
-      fallbackTimer = setTimeout(() => {
-        if (socket && socket.readyState !== WebSocket.OPEN) {
-          socket.close();
-          startSimulator("No response from /ws/telemetry — running local digital-twin simulator.");
-        }
-      }, 2500);
-
-      socket.onopen = () => {
-        if (fallbackTimer) clearTimeout(fallbackTimer);
-        setLastError(null);
-        setStatus("live");
-      };
-      socket.onmessage = (evt) => {
-        try {
-          push(JSON.parse(evt.data as string) as TelemetryFrame);
-        } catch {
-          setLastError("Malformed telemetry frame discarded.");
-        }
-      };
-      socket.onerror = () => {
-        startSimulator("Telemetry socket error — running local digital-twin simulator.");
-      };
-      socket.onclose = () => {
-        if (!cancelled && !interval) {
-          startSimulator("Telemetry socket closed — running local digital-twin simulator.");
-        }
-      };
-    } catch {
-      startSimulator("Telemetry socket unavailable — running local digital-twin simulator.");
-    }
+    connectWebSocket();
 
     return () => {
       cancelled = true;
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      if (interval) clearInterval(interval);
       if (socket) {
         socket.onclose = null;
         socket.close();
       }
     };
-  }, [push]);
+  }, [push, onAnomalyEvent, onPendingCommand]);
 
   const latest = history.length > 0 ? history[history.length - 1]! : null;
 

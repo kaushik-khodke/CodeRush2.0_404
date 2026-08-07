@@ -3,12 +3,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.db import init_db
-from routers import telemetry, predict, approval, mission, websocket
+from routers import telemetry, predict, approval, mission, websocket, seeding
 from config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize DB schema tables
     print("[Startup] Initializing Mission Control Database Schema...")
     try:
         await init_db()
@@ -16,7 +15,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Startup Warning] Could not initialize DB tables automatically: {e}")
     yield
-    # Shutdown
     print("[Shutdown] Mission Control Server Stopping...")
 
 app = FastAPI(
@@ -26,7 +24,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,12 +32,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API Routers
 app.include_router(telemetry.router)
 app.include_router(predict.router)
 app.include_router(approval.router)
 app.include_router(mission.router)
 app.include_router(websocket.router)
+app.include_router(seeding.router)
 
 @app.get("/")
 async def root():

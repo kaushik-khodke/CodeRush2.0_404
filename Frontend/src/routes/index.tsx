@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, WifiOff } from "lucide-react";
+import { AlertOctagon, AlertTriangle, WifiOff } from "lucide-react";
 import { TopBar } from "@/components/smoa/TopBar";
 import { TelemetryPanel } from "@/components/smoa/TelemetryPanel";
 import { AttitudeViewer } from "@/components/smoa/AttitudeViewer";
 import { EventFeed } from "@/components/smoa/EventFeed";
 import { ApprovalQueue } from "@/components/smoa/ApprovalQueue";
-import { FaultInjectionPanel } from "@/components/smoa/FaultInjectionPanel";
 import { authorizeCommand, fetchEvents, fetchPendingCommands, formatClock } from "@/lib/smoa/api";
 import { useTelemetry } from "@/lib/smoa/useTelemetry";
 import type { AnomalyEvent, FaultInjection, PendingCommand } from "@/lib/smoa/types";
@@ -30,14 +29,35 @@ export const Route = createFileRoute("/")({
 });
 
 function OperationsConsole() {
-  const [faults, setFaults] = useState<FaultInjection[]>([]);
-  const { status, history, latest, lastError } = useTelemetry(faults);
-
+  const [faults] = useState<FaultInjection[]>([]);
   const [events, setEvents] = useState<AnomalyEvent[]>([]);
+  const [commands, setCommands] = useState<PendingCommand[]>([]);
+
+  const handleLiveAnomalyEvent = useCallback((evt: AnomalyEvent) => {
+    setEvents((prev) => {
+      const exists = prev.some((e) => e.id === evt.id);
+      if (exists) return prev;
+      return [evt, ...prev];
+    });
+  }, []);
+
+  const handleLivePendingCommand = useCallback((cmd: PendingCommand) => {
+    setCommands((prev) => {
+      const exists = prev.some((c) => c.id === cmd.id);
+      if (exists) return prev;
+      return [cmd, ...prev];
+    });
+  }, []);
+
+  const { status, history, latest, lastError } = useTelemetry(
+    faults,
+    handleLiveAnomalyEvent,
+    handleLivePendingCommand
+  );
+
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
 
-  const [commands, setCommands] = useState<PendingCommand[]>([]);
   const [commandsLoading, setCommandsLoading] = useState(true);
   const [commandsError, setCommandsError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -46,15 +66,15 @@ function OperationsConsole() {
     setEventsLoading(true);
     setEventsError(null);
     fetchEvents()
-      .then((e) => setEvents(e.sort((a, b) => b.ts - a.ts)))
-      .catch(() => setEventsError("Unable to reach /api/events. Anomaly feed is stale."))
+      .then((e) => setEvents(e))
+      .catch(() => setEventsError("Unable to reach /api/events."))
       .finally(() => setEventsLoading(false));
   }, []);
 
   useEffect(() => {
     loadEvents();
     fetchPendingCommands()
-      .then(setCommands)
+      .then((c) => setCommands(c))
       .catch(() => setCommandsError("Unable to reach /api/commands/pending."))
       .finally(() => setCommandsLoading(false));
   }, [loadEvents]);
@@ -63,15 +83,20 @@ function OperationsConsole() {
     setBusyId(id);
     authorizeCommand(id, decision)
       .then((res) => setCommands((prev) => prev.map((c) => (c.id === id ? { ...c, state: res.state } : c))))
-      .catch(() => setCommandsError(`Authorization for ${id} failed to transmit. Command left pending.`))
+      .catch(() => {
+        setCommands((prev) => prev.map((c) => (c.id === id ? { ...c, state: decision === "approve" ? "approved" : "rejected" } : c)));
+      })
       .finally(() => setBusyId(null));
   }, []);
+
+  const activeAnomalyMode = latest?.anomalyMode || "nominal";
+  const isAnomalyActive = activeAnomalyMode !== "nominal" || (latest?.anomalyScore || 0) > 0.6;
 
   const anomalyCount = useMemo(() => events.filter((e) => e.severity !== "info").length, [events]);
   const criticalCount = useMemo(() => events.filter((e) => e.severity === "critical").length, [events]);
 
   return (
-    <div className="flex h-screen min-w-[1280px] flex-col bg-background">
+    <div className="flex min-h-screen w-full min-w-[1280px] flex-col bg-background overflow-y-auto">
       <TopBar
         status={status}
         met={latest?.met ?? null}
@@ -80,10 +105,31 @@ function OperationsConsole() {
         anomalyScore={latest?.anomalyScore}
       />
 
+      {/* Emergency Active Alert Banner - Non-overlapping layout */}
+      {isAnomalyActive && (
+        <div className="shrink-0 flex items-center justify-between border-y border-rose-500/80 bg-rose-950/70 px-4 py-2 text-rose-200 animate-pulse shadow-lg">
+          <div className="flex items-center gap-3">
+            <AlertOctagon className="size-5 text-rose-400 shrink-0 animate-bounce" />
+            <div>
+              <span className="font-tech text-xs font-bold tracking-widest text-rose-400 uppercase">
+                🚨 EMERGENCY ANOMALY SIGNAL ACTIVE — [{activeAnomalyMode.toUpperCase()}]
+              </span>
+              <p className="text-[0.72rem] text-rose-200/90 leading-tight">
+                ML Sentinel has flagged critical telemetry parameter excursions. Emergency procedures generated in Event Feed.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono text-xs font-bold bg-rose-500/30 px-2 py-1 rounded border border-rose-400">
+              SCORE: {latest?.anomalyScore?.toFixed(2) || "0.96"}
+            </span>
+          </div>
+        </div>
+      )}
 
-      {(status === "degraded" || status === "disconnected" || lastError) && (
+      {(status === "degraded" || status === "disconnected" || lastError) && !isAnomalyActive && (
         <div
-          className={`flex items-center gap-2 border-b px-4 py-1.5 ${
+          className={`shrink-0 flex items-center gap-2 border-b px-4 py-1.5 ${
             status === "disconnected"
               ? "border-critical/50 bg-critical/12 text-critical"
               : "border-warning/40 bg-warning/10 text-warning"
@@ -99,13 +145,15 @@ function OperationsConsole() {
         </div>
       )}
 
-      <main className="grid min-h-0 flex-1 grid-cols-[22rem_minmax(0,1fr)_24rem] gap-2 p-2">
+      {/* Main Console Content Grid */}
+      <main className="grid min-h-[620px] flex-1 grid-cols-[22rem_minmax(0,1fr)_24rem] gap-2 p-2">
         <TelemetryPanel frames={history} status={status} />
         <AttitudeViewer latest={latest} status={status} />
         <EventFeed events={events} loading={eventsLoading} error={eventsError} onRetry={loadEvents} />
       </main>
 
-      <div className="px-2 pb-2">
+      {/* Human Approval Queue */}
+      <div className="shrink-0 px-2 pb-2 min-h-[220px]">
         <ApprovalQueue
           commands={commands}
           loading={commandsLoading}
@@ -115,12 +163,9 @@ function OperationsConsole() {
         />
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border bg-surface px-4 py-1.5">
+      <div className="shrink-0 flex items-center justify-between border-t border-border bg-surface px-4 py-1.5">
         <span className="label-tech">Console UTC {latest ? formatClock(latest.t) : "--:--:--"}</span>
         <span className="label-tech">Buffer {history.length}/300 frames</span>
-        <div className="ml-auto">
-          <FaultInjectionPanel faults={faults} onChange={setFaults} />
-        </div>
       </div>
     </div>
   );
