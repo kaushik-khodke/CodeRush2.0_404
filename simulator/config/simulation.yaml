@@ -1,0 +1,7 @@
+simulation_frequency_hz: 1.0
+time_step_sec: 1.0
+enable_basilisk_native: true
+physics_fallback_enabled: true
+telemetry_bridge_url: "http://localhost:8000/api/telemetry/frame"
+websocket_bridge_url: "ws://localhost:8000/ws/telemetry"
+auto_start_scenario: "earth_observation"

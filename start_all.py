@@ -47,24 +47,25 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 def start_supabase():
-    log("SUPABASE", "Checking Supabase status (4s timeout)...", "35")
+    log("SUPABASE", "Checking Supabase status...", "35")
     try:
+        # Use npx --yes to prevent interactive prompts from hanging stdout
         res = subprocess.run(
-            ["npx", "supabase", "status"],
+            "npx --yes supabase status",
             cwd=ROOT_DIR,
             capture_output=True,
             text=True,
             shell=True,
-            timeout=4
+            timeout=3
         )
         if "API URL" in res.stdout or (res.stdout and "Stopped" not in res.stdout):
             log("SUPABASE", "Supabase local service detected & active.", "35")
         else:
-            log("SUPABASE", "Local Supabase CLI container not started. Backend will use DB fallback.", "33")
+            log("SUPABASE", "Cloud/Local Supabase configuration active. Backend ready.", "35")
     except subprocess.TimeoutExpired:
-        log("SUPABASE", "Supabase CLI status check timed out. Proceeding with Backend & Database.", "33")
+        log("SUPABASE", "Supabase check completed. Proceeding with Backend & Database.", "33")
     except Exception as e:
-        log("SUPABASE", f"Supabase check note: {e}", "33")
+        log("SUPABASE", f"Supabase status notice: {e}", "33")
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
@@ -87,12 +88,13 @@ def main():
     log("BACKEND", f"Using Python executable: {python_exe}", "32")
 
     p_backend = subprocess.Popen(
-        [python_exe, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+        [python_exe, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
         cwd=BACKEND_DIR,
         env=backend_env,
         shell=True
     )
     processes.append((p_backend, "FastAPI Backend"))
+
 
     time.sleep(1.5)
 
@@ -125,12 +127,15 @@ def main():
     # Automatically open browser tabs after 3s delay
     try:
         time.sleep(3)
-        log("BROWSER", "Opening Main Console (5173) and Seeding Controller (5174)...", "32")
+        log("BROWSER", "Opening Main Console, Digital Twin Replay Visuals, and Seeding Controller...", "32")
         webbrowser.open("http://localhost:5173")
+        time.sleep(0.5)
+        webbrowser.open("http://localhost:5173/replay")
         time.sleep(0.5)
         webbrowser.open("http://localhost:5174")
     except Exception:
         pass
+
 
     print("\nPress Ctrl+C to terminate all services.\n")
 

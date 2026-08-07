@@ -87,7 +87,7 @@ def get_langfuse_callback() -> Optional[Any]:
 
     return None
 
-def log_agent_trace(trace_name: str, agent_name: str, prompt: str, output: Any, metadata: Optional[dict] = None):
+def log_agent_trace(trace_name: str, agent_name: str, prompt: str, output: Any, metadata: Optional[dict] = None, model_name: Optional[str] = None):
     """
     Direct Langfuse trace logger guaranteeing trace transmission to us.cloud.langfuse.com.
     """
@@ -100,13 +100,14 @@ def log_agent_trace(trace_name: str, agent_name: str, prompt: str, output: Any, 
             )
             trace.generation(
                 name=agent_name,
-                model="llama-3.3-70b-versatile",
+                model=model_name or "llama-3.3-70b-versatile",
                 input=prompt,
                 output=str(output)
             )
             client.flush()
         except Exception as e:
             print(f"[Langfuse Direct Trace Log Warning]: {e}")
+
 
 def flush_langfuse():
     """
