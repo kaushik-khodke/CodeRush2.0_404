@@ -152,6 +152,12 @@ def load_ml_pipeline():
 @app.on_event("startup")
 def startup_event():
     load_ml_pipeline()
+    try:
+        from database.repositories.supabase_repository import SupabaseRepository
+        SupabaseRepository.seed_initial_data()
+    except Exception as e:
+        print(f"[Supabase Startup Notice] Seeding notice: {e}")
+
 
 def generate_telemetry_frame() -> Dict[str, Any]:
     state.met += 1

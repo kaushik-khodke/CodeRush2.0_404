@@ -122,7 +122,9 @@ function OperationsConsole() {
         anomalyScore={latest?.anomalyScore ?? 0.08}
         onToggleAgents={() => setAgentSidebarOpen((prev) => !prev)}
         agentsOpen={agentSidebarOpen}
+        telemetrySource={telemetrySource}
       />
+
 
       {/* Control Room Agent Roster Sidebar Drawer */}
       <AnimatePresence>
@@ -213,9 +215,9 @@ function OperationsConsole() {
               <SelectItem value="digital-twin">Digital Twin</SelectItem>
             </SelectContent>
           </Select>
-          <FaultInjectionPanel faults={faults} onChange={setFaults} />
         </div>
       </div>
+
     </div>
   );
 }

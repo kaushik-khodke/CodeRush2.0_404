@@ -28,8 +28,9 @@ if (typeof window !== "undefined") {
 
 const satellitesConfig = [
   { id: "GSAT-201", plane: 0, phase: 0 },
-  { id: "GSAT-204", plane: 0, phase: 72 },
+  { id: "GSAT-204", plane: 1, phase: 140 },
 ];
+
 
 const EarthRadiusScale = 1.5;
 const EarthRotationSpeed = (2 * Math.PI) / 86400;
@@ -103,7 +104,8 @@ function LineConnection({ from, to, isHighlighted }) {
 }
 
 // 3D Inner Component
-function Constellation3DInner({ latest, activeSatellites, sunDirection, selectedSatId }) {
+function Constellation3DInner({ latest, activeSatellites, sunDirection, selectedSatId, onSelectSat }) {
+
   const orbitLinesRef = useRef([]);
   const met = latest?.met ?? 128400;
 
@@ -122,9 +124,9 @@ function Constellation3DInner({ latest, activeSatellites, sunDirection, selected
         const elements = {
           a: 7100000,
           e: 0.01,
-          i: 55,
-          raan: sat.plane * 120,
-          argPer: 0,
+          i: sat.plane === 0 ? 55 : 97.8,
+          raan: sat.plane === 0 ? 0 : 120,
+          argPer: sat.plane * 45,
           meanAnomaly: sat.phase,
         };
         const pos = keplerToECI(elements, checkT).position;
@@ -137,10 +139,16 @@ function Constellation3DInner({ latest, activeSatellites, sunDirection, selected
 
   return (
     <group>
-      <Stars radius={90} depth={30} count={1000} factor={3.5} saturation={0} fade speed={0.3} />
-      
+      <Stars radius={150} depth={60} count={5000} factor={4.5} saturation={0.5} fade speed={1.2} />
+      <ambientLight intensity={1.4} />
+      <directionalLight position={[5, 3, 5]} intensity={2.5} />
+      <directionalLight position={[-5, -3, -5]} intensity={0.8} color="#00f0ff" />
+
       {/* 3D Earth Globe */}
       <Earth />
+
+
+
 
       {/* Orbit Lines */}
       {satellitesConfig.map((sat, index) => {
@@ -157,55 +165,69 @@ function Constellation3DInner({ latest, activeSatellites, sunDirection, selected
         );
       })}
 
-      {/* Ground Stations (Green diamonds) */}
+      {/* Ground Stations (Sleek Green 3D Diamond Indicators) */}
       {groundStations.map((station) => {
         const pos = getStationECIPosition(station, met);
         return (
           <group key={station.id} position={pos}>
             <mesh>
-              <octahedronGeometry args={[0.038]} />
-              <meshBasicMaterial color="#57c67a" />
+              <octahedronGeometry args={[0.025]} />
+              <meshBasicMaterial color="#57c67a" transparent opacity={0.7} />
             </mesh>
-            <Html distanceFactor={4.5} center>
-              <div className="font-mono text-[6px] font-bold text-[#57c67a]/90 bg-black/95 border border-[#57c67a]/20 px-1 py-px rounded-xs whitespace-nowrap pointer-events-none scale-90">
-                {station.name.split("-")[1] || station.name}
-              </div>
-            </Html>
           </group>
         );
       })}
 
+
       {/* Satellites */}
       {activeSatellites.map((sat) => {
         const isSelected = selectedSatId === sat.id;
+
+        // Calculate smooth flight direction orientation
+        const zAxis = new THREE.Vector3(0, 0, 1);
+        const quat = new THREE.Quaternion().setFromUnitVectors(zAxis, sat.flightDir || new THREE.Vector3(0, 1, 0));
+        const euler = new THREE.Euler().setFromQuaternion(quat);
+
         return (
           <group key={sat.id}>
-            <group position={sat.pos}>
+            <group position={sat.pos} onClick={(e) => { e.stopPropagation(); onSelectSat && onSelectSat(sat.id); }}>
               {/* Highlight Ring around Selected Satellite */}
+
               {isSelected && (
                 <mesh rotation={[Math.PI / 2, 0, 0]}>
                   <ringGeometry args={[0.09, 0.11, 32]} />
-                  <meshBasicMaterial color="#ffb703" side={THREE.DoubleSide} transparent opacity={0.65} />
+                  <meshBasicMaterial color={sat.isAnomalyActive ? "#f43f5e" : "#ffb703"} side={THREE.DoubleSide} transparent opacity={0.65} />
                 </mesh>
               )}
 
-              <group scale={0.038} rotation={[Math.PI / 4, Math.PI / 6, 0]}>
+              {/* Pulsating Hazard Ring for Active Anomaly */}
+              {sat.isAnomalyActive && (
+                <mesh rotation={[Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[0.13, 0.17, 32]} />
+                  <meshBasicMaterial color="#f43f5e" side={THREE.DoubleSide} transparent opacity={0.85} />
+                </mesh>
+              )}
+
+              <group scale={0.038} rotation={[euler.x, euler.y, euler.z]}>
                 <Satellite selectedSubsystem={null} setSelectedSubsystem={() => {}} />
               </group>
               
               {/* Satellite name label */}
               <Html distanceFactor={4.5} center position={[0, 0.22, 0]}>
-                <div className={`font-mono text-[7.5px] font-bold bg-black/95 border px-1.5 py-0.5 rounded-xs whitespace-nowrap pointer-events-none ${
-                  isSelected
-                    ? "text-[#ffb703] border-[#ffb703] shadow-md shadow-[#ffb703]/20 scale-105"
-                    : sat.inEclipse
-                      ? "text-warning border-warning/30"
-                      : "text-[#4fd8c8] border-[#4fd8c8]/30"
+                <div className={`font-mono text-[7.5px] font-bold bg-black/95 border px-1.5 py-0.5 rounded-xs whitespace-nowrap pointer-events-none transition-all duration-300 ${
+                  sat.isAnomalyActive
+                    ? "text-rose-400 border-rose-500 bg-rose-950/90 shadow-lg shadow-rose-500/50 animate-pulse scale-110"
+                    : isSelected
+                      ? "text-[#ffb703] border-[#ffb703] shadow-md shadow-[#ffb703]/20 scale-105"
+                      : sat.inEclipse
+                        ? "text-warning border-warning/30"
+                        : "text-[#4fd8c8] border-[#4fd8c8]/30"
                 }`}>
-                  {sat.id}
+                  {sat.id} {sat.isAnomalyActive ? "⚠️ ANOMALY" : ""}
                 </div>
               </Html>
             </group>
+
 
             {/* Render stable lines to visible stations */}
             {sat.contacts.map((c) => (
@@ -238,8 +260,9 @@ function Constellation3DInner({ latest, activeSatellites, sunDirection, selected
 }
 
 // Main Dashboard Component
-export default function ConstellationDashboard({ latest, history = [], status }) {
+export default function ConstellationDashboard({ latest, history = [], status, events = [] }) {
   const met = latest?.met ?? 128400;
+
 
   // Selected satellite state (for detailed telemetry roster inspect)
   const [selectedSatId, setSelectedSatId] = useState("GSAT-201");
@@ -267,18 +290,28 @@ export default function ConstellationDashboard({ latest, history = [], status })
   const activeSatellites = useMemo(() => {
     const scale = 1.5 / 6371000;
     return satellitesConfig.map((sat) => {
+      const isGSAT201 = sat.id === "GSAT-201";
+
       const elements = {
         a: 7100000,
         e: 0.01,
-        i: 55,
-        raan: sat.plane * 120,
-        argPer: 0,
+        i: sat.plane === 0 ? 55 : 97.8,
+        raan: sat.plane === 0 ? 0 : 120,
+        argPer: sat.plane * 45,
         meanAnomaly: sat.phase,
       };
 
       // numerical or kepler propagation
       const eci = keplerToECI(elements, met).position;
       const threePos = [eci[0] * scale, eci[1] * scale, eci[2] * scale];
+
+      // Smooth flight direction rotation vector
+      const nextEci = keplerToECI(elements, met + 2).position;
+      const nextThreePos = [nextEci[0] * scale, nextEci[1] * scale, nextEci[2] * scale];
+      const flightDir = new THREE.Vector3().subVectors(
+        new THREE.Vector3(...nextThreePos),
+        new THREE.Vector3(...threePos)
+      ).normalize();
 
       // Eclipse test (cylindrical projection in Earth's shadow)
       const satVec = new THREE.Vector3(...threePos);
@@ -289,7 +322,7 @@ export default function ConstellationDashboard({ latest, history = [], status })
         inEclipse = perp.length() < 1.49; // Earth shadow radius
       }
 
-      // Check contacts with all 8 ground stations
+      // Check contacts with all ground stations
       const contacts = [];
       groundStations.forEach((gs) => {
         const gsPos = getStationECIPosition(gs, met);
@@ -301,25 +334,43 @@ export default function ConstellationDashboard({ latest, history = [], status })
 
       const { lat, lon } = eciToLatLon(eci, met);
 
-      // Link simulation state and inject anomaly values if active
+      // Link simulation state or live seeded stream data for GSAT-201
       const state = satellitesState.find((s) => s.id === sat.id) || { soc: 85, fuel: 80 };
-      const isAnomalyActive = !!anomalies[sat.id];
-      const liveSoc = isAnomalyActive ? Math.max(14.2, state.soc - 40) : state.soc;
+
+      const isAnomalyActive = isGSAT201
+        ? (
+            (latest?.anomalyScore !== undefined && latest.anomalyScore > 0.5) ||
+            (latest?.power?.busVoltage !== undefined && latest.power.busVoltage < 21.0) ||
+            (events && events.length > 0) ||
+            !!anomalies[sat.id]
+          )
+        : !!anomalies[sat.id];
+
+      const liveSoc = isGSAT201 && latest?.power?.stateOfCharge !== undefined
+        ? latest.power.stateOfCharge
+        : (isAnomalyActive ? Math.max(14.2, state.soc - 40) : state.soc);
+
+      const liveBusVoltage = isGSAT201 && latest?.power?.busVoltage !== undefined
+        ? latest.power.busVoltage
+        : (isAnomalyActive ? 18.93 : 28.2);
 
       return {
         id: sat.id,
         pos: threePos,
+        flightDir,
         lat,
         lon,
         inEclipse,
         contacts,
         soc: liveSoc,
+        busVoltage: liveBusVoltage,
         fuel: state.fuel,
         plane: sat.plane,
         isAnomalyActive,
       };
     });
-  }, [met, sunDirection, satellitesState, anomalies]);
+  }, [met, sunDirection, satellitesState, anomalies, latest, events]);
+
 
   // Tick simulation of satellite batteries
   useEffect(() => {
@@ -406,6 +457,18 @@ export default function ConstellationDashboard({ latest, history = [], status })
 
   const healthScore = Math.max(20, 100 - (battAlarms * 12 + fuelAlarms * 8 + anomalyCount * 15 + (status === "disconnected" ? 50 : 0)));
 
+  // Selected Node Health Score (dynamically calculated for selected satellite)
+  const selectedNodeHealthScore = useMemo(() => {
+    if (!selectedSatObj) return 100;
+    let score = 100;
+    if (selectedSatObj.isAnomalyActive) score -= 35;
+    if (selectedSatObj.soc < 40) score -= Math.round((40 - selectedSatObj.soc) * 1.5);
+    if (selectedSatObj.fuel < 70) score -= Math.round((70 - selectedSatObj.fuel) * 0.5);
+    if (status === "disconnected") score -= 20;
+    return Math.max(20, Math.min(100, Math.round(score)));
+  }, [selectedSatObj, status]);
+
+
   // Sparkline history tracking average SoC
   const [socHistory, setSocHistory] = useState([82, 83, 83, 84, 84, 85, 86, 86, 87, 87, 88, 88, 89, 89, 89]);
   useEffect(() => {
@@ -468,7 +531,9 @@ export default function ConstellationDashboard({ latest, history = [], status })
                     activeSatellites={activeSatellites}
                     sunDirection={sunDirection}
                     selectedSatId={selectedSatId}
+                    onSelectSat={setSelectedSatId}
                   />
+
                 </Suspense>
                 <OrbitControls
                   enableZoom={true}
@@ -622,17 +687,20 @@ export default function ConstellationDashboard({ latest, history = [], status })
         {/* Bulletproof horizontal flexbox row layout (replaces grid to prevent wrapping and spacing overlaps) */}
         <div className="flex flex-row justify-between items-center flex-1 w-full gap-6">
           
-          {/* Column 1: Global Health (22% width) */}
+          {/* Column 1: Selected Node Health Index (22% width) */}
           <div className="flex items-center justify-between border-r border-border/10 pr-6 h-full w-[22%] shrink-0">
             <div className="flex flex-col leading-tight">
-              <span className="font-tech text-[0.58rem] text-muted-foreground uppercase tracking-wider">Health Index</span>
+              <span className="font-tech text-[0.58rem] text-muted-foreground uppercase tracking-wider">
+                {selectedSatObj?.id || "Node"} Health Index
+              </span>
               <span className={`num text-3xl font-extrabold mt-0.5 ${
-                healthScore >= 75 ? "text-nominal" : healthScore >= 45 ? "text-warning" : "text-critical"
+                selectedNodeHealthScore >= 75 ? "text-nominal" : selectedNodeHealthScore >= 45 ? "text-warning" : "text-critical"
               }`}>
-                {healthScore}
+                {selectedNodeHealthScore}
                 <span className="text-xs font-semibold text-muted-foreground ml-1">/100</span>
               </span>
             </div>
+
             <div className="flex flex-col pl-4 justify-center">
               <div className="flex items-baseline gap-2 font-mono text-[0.65rem]">
                 <span className="text-foreground font-bold">{totalSatellites}</span>
@@ -675,35 +743,53 @@ export default function ConstellationDashboard({ latest, history = [], status })
                   <span className={`font-bold uppercase mt-0.5 ${
                     selectedSatObj.isAnomalyActive ? "text-critical" : "text-nominal"
                   }`}>
-                    {selectedSatObj.isAnomalyActive ? "Attenuated" : "Nominal"}
+                    {selectedSatObj.isAnomalyActive
+                      ? `Critical (${selectedSatObj.busVoltage ? selectedSatObj.busVoltage.toFixed(1) + "V" : "Droop"})`
+                      : `Nominal (${selectedSatObj.busVoltage ? selectedSatObj.busVoltage.toFixed(1) + "V" : "28.2V"})`}
                   </span>
                 </div>
                 <div className="flex flex-col font-mono text-[0.52rem]">
                   <span className="text-muted-foreground uppercase text-[0.48rem]">AOCS (Attitude)</span>
-                  <span className="text-nominal font-bold uppercase mt-0.5">Nominal</span>
+                  <span className="text-nominal font-bold uppercase mt-0.5">
+                    {selectedSatObj.id === "GSAT-201" && latest?.adcs
+                      ? `${latest.adcs.roll.toFixed(1)}° R / ${latest.adcs.pitch.toFixed(1)}° P`
+                      : "Nominal (0.2° R)"}
+                  </span>
                 </div>
                 <div className="flex flex-col font-mono text-[0.52rem]">
                   <span className="text-muted-foreground uppercase text-[0.48rem]">COMMS (RF)</span>
                   <span className={`font-bold uppercase mt-0.5 ${
                     selectedSatObj.contacts.length > 0 ? "text-nominal" : "text-muted-foreground"
                   }`}>
-                    {selectedSatObj.contacts.length > 0 ? "Linked" : "Standby"}
+                    {selectedSatObj.id === "GSAT-201" && latest?.comms
+                      ? `${latest.comms.signalDbm.toFixed(0)}dBm (${latest.comms.packetLoss.toFixed(1)}%)`
+                      : selectedSatObj.contacts.length > 0
+                        ? `Linked (${selectedSatObj.contacts.map((c) => c.name.split("-")[1] || c.name).join(", ")})`
+                        : "Standby"}
                   </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Column 3: EPS Voltage Sparkline (28% width, overrides global SVG overrides) */}
+
+
+          {/* Column 3: Node SoC vs Fleet Min (28% width) */}
           <div className="flex items-center justify-between border-r border-border/10 pr-6 h-full pl-2 w-[28%] shrink-0">
             <div className="flex flex-col leading-tight shrink-0">
-              <span className="font-tech text-[0.55rem] text-muted-foreground uppercase tracking-wide">Avg SoC / Min</span>
+              <span className="font-tech text-[0.55rem] text-[#ffb703] uppercase tracking-wide font-bold">
+                {selectedSatObj?.id || "Node"} SoC (Fleet Min)
+              </span>
               <span className="num text-lg font-bold mt-0.5">
-                <span className="text-primary">{avgSoC}%</span>
+                <span className={selectedSatObj?.isAnomalyActive ? "text-critical" : "text-primary"}>
+                  {selectedSatObj ? Math.round(selectedSatObj.soc) : avgSoC}%
+                </span>
                 <span className="text-muted-foreground text-xs font-normal mx-1.5">/</span>
-                <span className={minSoC < 40 ? "text-critical" : "text-foreground"}>{minSoC}%</span>
+                <span className={minSoC < 40 ? "text-critical" : "text-foreground"}>{minSoC}% min</span>
               </span>
             </div>
+
+
             {/* Sparkline svg container with inline style width to override global CSS overrides */}
             <div className="flex items-center justify-center border border-border/20 bg-background/50 rounded-xs px-2 py-1 ml-4 shrink-0" style={{ width: "126px", height: "30px" }}>
               <svg width="110" height="20" style={{ width: "110px", height: "20px", display: "block" }} viewBox="0 0 110 20">

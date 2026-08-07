@@ -11,11 +11,11 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   plugins: [
     {
-      name: "seeding-html-fallback",
+      name: "constellation-html-fallback",
       configureServer(server) {
         server.middlewares.use((req, _res, next) => {
           if (req.url === "/" || req.url === "") {
-            req.url = "/seeding.html";
+            req.url = "/constellation.html";
           }
           next();
         });
@@ -33,7 +33,7 @@ export default defineConfig({
   root: __dirname,
 
   server: {
-    port: 5174,
+    port: 5175,
     strictPort: true,
     host: "0.0.0.0",
     proxy: {
@@ -50,7 +50,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        seeding: path.resolve(__dirname, "seeding.html"),
+        constellation: path.resolve(__dirname, "constellation.html"),
       },
     },
   },

@@ -116,25 +116,36 @@ def main():
     )
     processes.append((p_seeding, "Data Seeding Controller"))
 
+    # 5. 3D Constellation Orbit Tracker App (Port 5175)
+    log("CONSTELLATION", "Starting 3D Constellation Orbit Tracker on http://localhost:5175...", "35")
+    p_constellation = subprocess.Popen(
+        ["npm", "run", "dev:constellation"],
+        cwd=FRONTEND_DIR,
+        shell=True
+    )
+    processes.append((p_constellation, "3D Constellation Tracker"))
+
     print("=" * 70)
     print("ALL MISSION CONTROL SERVICES RUNNING SUCCESSFULLY!")
     print("  Backend API & WebSockets: http://localhost:8000")
     print("  Supabase / Mission DB:   Integrated")
     print("  Main Mission Console:    http://localhost:5173")
     print("  Data Seeding Controller: http://localhost:5174")
+    print("  3D Constellation App:    http://localhost:5175")
     print("=" * 70)
 
     # Automatically open browser tabs after 3s delay
     try:
         time.sleep(3)
-        log("BROWSER", "Opening Main Console, Digital Twin Replay Visuals, and Seeding Controller...", "32")
+        log("BROWSER", "Opening Main Console (5173), Constellation (5175), and Seeding (5174)...", "32")
         webbrowser.open("http://localhost:5173")
         time.sleep(0.5)
-        webbrowser.open("http://localhost:5173/replay")
+        webbrowser.open("http://localhost:5175")
         time.sleep(0.5)
         webbrowser.open("http://localhost:5174")
     except Exception:
         pass
+
 
 
     print("\nPress Ctrl+C to terminate all services.\n")
