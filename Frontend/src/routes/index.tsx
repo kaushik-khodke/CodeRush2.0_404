@@ -72,7 +72,14 @@ function OperationsConsole() {
 
   return (
     <div className="flex h-screen min-w-[1280px] flex-col bg-background">
-      <TopBar status={status} met={latest?.met ?? null} anomalyCount={anomalyCount} criticalCount={criticalCount} />
+      <TopBar
+        status={status}
+        met={latest?.met ?? null}
+        anomalyCount={anomalyCount}
+        criticalCount={criticalCount}
+        anomalyScore={latest?.anomalyScore}
+      />
+
 
       {(status === "degraded" || status === "disconnected" || lastError) && (
         <div

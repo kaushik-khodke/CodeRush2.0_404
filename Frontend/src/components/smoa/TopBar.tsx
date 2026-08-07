@@ -17,9 +17,10 @@ interface TopBarProps {
   met: number | null;
   anomalyCount: number;
   criticalCount: number;
+  anomalyScore?: number;
 }
 
-export function TopBar({ status, met, anomalyCount, criticalCount }: TopBarProps) {
+export function TopBar({ status, met, anomalyCount, criticalCount, anomalyScore }: TopBarProps) {
   const meta = statusMeta[status];
 
   return (
@@ -53,11 +54,25 @@ export function TopBar({ status, met, anomalyCount, criticalCount }: TopBarProps
         ))}
       </nav>
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-4">
         <div className="text-right leading-tight">
           <div className="label-tech">MET (ddd:hh:mm:ss)</div>
           <div className="num text-sm text-foreground">{met === null ? "---:--:--:--" : formatMet(met)}</div>
         </div>
+
+        {anomalyScore !== undefined && (
+          <div className="flex items-center gap-1.5 rounded-sm border border-border bg-background px-2.5 py-1.5">
+            <span className="label-tech text-[0.65rem]">ML Sentinel</span>
+            <span
+              className={cn(
+                "num text-xs font-semibold",
+                anomalyScore > 0.6 ? "text-critical" : anomalyScore > 0.3 ? "text-warning" : "text-nominal",
+              )}
+            >
+              {anomalyScore.toFixed(2)}
+            </span>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 rounded-sm border border-border bg-background px-2.5 py-1.5">
           <span className="relative flex size-2">
@@ -94,3 +109,4 @@ export function TopBar({ status, met, anomalyCount, criticalCount }: TopBarProps
     </header>
   );
 }
+
