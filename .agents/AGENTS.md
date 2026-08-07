@@ -1,8 +1,9 @@
-# Git Commit Message Convention
+# Custom Rules
 
-When committing changes, follow this convention for commit messages:
-- `feat:` for new features
-- `fix:` for bug fixes
-- `docs:` for documentation
-- `refactor:` for code improvements
-- `chore:` for maintenance tasks
+## Commit Message Convention
+Follow Conventional Commits format:
+- `feat`: for new features
+- `fix`: for bug fixes
+- `docs`: for documentation
+- `refactor`: for code improvements
+- `chore`: for maintenance tasks
