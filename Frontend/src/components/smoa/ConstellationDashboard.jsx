@@ -280,15 +280,7 @@ export default function ConstellationDashboard({ latest, history = [], status, e
   // Anomalies dictionary state (satellite ID -> true if voltage drop injected)
   const [anomalies, setAnomalies] = useState({});
 
-  const handleToggleAnomaly = (id) => {
-    setAnomalies((prev) => {
-      const nextState = !prev[id];
-      if (nextState) {
-        setShowAnomalyModal(true);
-      }
-      return { ...prev, [id]: nextState };
-    });
-  };
+
 
   // 1. Establish Sun Vector
   const sunDirection = useMemo(() => {
@@ -520,10 +512,13 @@ export default function ConstellationDashboard({ latest, history = [], status, e
   }, [socHistory]);
 
   const handleToggleAnomaly = (satId) => {
-    setAnomalies((prev) => ({
-      ...prev,
-      [satId]: !prev[satId],
-    }));
+    setAnomalies((prev) => {
+      const nextState = !prev[satId];
+      if (nextState) {
+        setShowAnomalyModal(true);
+      }
+      return { ...prev, [satId]: nextState };
+    });
   };
 
   return (
