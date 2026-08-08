@@ -30,7 +30,7 @@ function Readout({ label, value, unit }: { label: string; value: string; unit: s
   );
 }
 
-export function AttitudeViewer({ latest, status }: { latest: TelemetryFrame | null; status: LinkStatus }) {
+export function AttitudeViewer({ latest, status, className }: { latest: TelemetryFrame | null; status: LinkStatus; className?: string }) {
   const attitude = useRef(latest?.adcs ?? { roll: 0, pitch: 0, yaw: 0, bodyRate: 0, wheelRpm: 0 });
   const orbitAngle = useRef(latest?.orbitAngle ?? 0);
   const metRef = useRef(latest?.met ?? 128400);
@@ -51,7 +51,7 @@ export function AttitudeViewer({ latest, status }: { latest: TelemetryFrame | nu
   const cpuTemp = latest?.thermal?.payloadTemp ?? 35.0;
 
   return (
-    <section className="panel flex flex-col h-[540px]">
+    <section className={cn("panel flex flex-col h-[540px]", className)}>
       <div className="panel-header flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="font-tech text-xs font-semibold tracking-[0.12em] uppercase">

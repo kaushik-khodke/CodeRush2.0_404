@@ -70,6 +70,14 @@ export interface Diagnosis {
   proposedAction: string;
   model: string;
   latencyMs: number;
+  /** Rich Langfuse Agentic AI Diagnosis fields */
+  final_recommendation?: string;
+  summary?: string;
+  reason?: string;
+  risk_level?: string;
+  expected_impact?: string;
+  recommended_procedure?: string;
+  human_explanation?: string;
   /** Predictive regression targets from ML model */
   predictiveMetrics?: {
     remainingBatteryLife?: string;

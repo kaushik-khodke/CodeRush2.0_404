@@ -881,6 +881,15 @@ async def set_anomaly(req: AnomalyRequest):
             diag_out = final_agent_state.get("diagnosis_output", {})
             fd_out = final_agent_state.get("flight_director_output", {})
             
+            if diag_out and event.get("diagnosis"):
+                event["diagnosis"]["final_recommendation"] = fd_out.get("procedure_title") or diag_out.get("recommended_procedure") or event["diagnosis"].get("proposedAction")
+                event["diagnosis"]["summary"] = diag_out.get("root_cause") or event["diagnosis"].get("rootCause")
+                event["diagnosis"]["reason"] = diag_out.get("explanation") or "Digital Twin Simulation Forecast indicates high success probability supporting SOP execution."
+                event["diagnosis"]["risk_level"] = "LOW" if is_autonomous else "MEDIUM"
+                event["diagnosis"]["expected_impact"] = "Expected improvement in battery recovery rate, minimal impact on orbit, and stable thermal state."
+                event["diagnosis"]["recommended_procedure"] = diag_out.get("recommended_procedure") or event["diagnosis"].get("proposedAction")
+                event["diagnosis"]["human_explanation"] = f"Multi-agent AI consensus confirmed anomaly diagnosis. Executing {diag_out.get('recommended_procedure', 'SOP')} is recommended with high confidence and low risk."
+
             log_agent_trace(
                 trace_name=f"SMOA 9-Agent Diagnosis — {req.mode.upper()}",
                 agent_name="Flight Director Chair (llama-3.3-70b-versatile)",

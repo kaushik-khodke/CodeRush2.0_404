@@ -83,6 +83,13 @@ class BasiliskAstrodynamicsEngine:
         payload_temp = init_payload_temp
         status_note = "Procedure validated: Spacecraft parameters within nominal safety bounds"
 
+      # Calculate 3D orientation recovery kinematics over 30 minutes
+      roll = (14.5 * (1.0 - t_norm)) + 0.2
+      pitch = (-8.2 * (1.0 - t_norm)) - 0.1
+      yaw = (22.0 * (1.0 - t_norm))
+      wheel_rpm = (5200.0 * (1.0 - t_norm)) + (2480.0 * t_norm)
+      pointing_error = round(0.045 * (1.0 - t_norm) + 0.008 * t_norm, 4)
+
       trajectory.append({
         "minute": minute,
         "timeLabel": f"T+{minute:02d}m",
@@ -90,6 +97,11 @@ class BasiliskAstrodynamicsEngine:
         "stateOfCharge": round(soc, 1),
         "arrayPower": round(array_power, 1),
         "payloadTemp": round(payload_temp, 1),
+        "roll": round(roll, 2),
+        "pitch": round(pitch, 2),
+        "yaw": round(yaw, 2),
+        "wheelRpm": round(wheel_rpm, 0),
+        "pointingErrorDeg": pointing_error
       })
 
     end_state = trajectory[-1]
