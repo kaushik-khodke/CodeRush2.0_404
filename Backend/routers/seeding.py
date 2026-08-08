@@ -404,7 +404,13 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
 
     batt_volts = 28.2 + wobble(29) * 0.4 + v_offset
     batt_curr = (4.8 if not eclipse else -2.1) + custom.get("Battery_Current", 0.0)
-    soc = max(5.0, min(100.0, soc_val + (-0.02 if eclipse else 0.03) + custom.get("Battery_SOC", 0.0)))
+    
+    if anomaly_mode == "nominal":
+        recharge_rate = 1.4 if not eclipse else 0.2
+        soc = min(98.5, soc_val + recharge_rate + custom.get("Battery_SOC", 0.0))
+    else:
+        soc = max(5.0, min(100.0, soc_val + (-0.02 if eclipse else 0.03) + custom.get("Battery_SOC", 0.0)))
+
     batt_temp = 24.1 + wobble(211) * 1.5 + (1.5 if not eclipse else -3.0) + t_batt_offset
     
     cpu_temp = 43.2 + wobble(150) * 2.0 + t_cpu_offset
@@ -430,9 +436,10 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
     
     if anomaly_mode == "power_droop":
         batt_volts = max(18.2, 28.2 - 9.7 + wobble(11) * 0.8) + v_offset
-        soc = max(12.0, soc - 0.5)
+        soc = max(12.0, soc_val - 0.8)
         batt_temp += 12.5 + wobble(15) * 1.5
         array_power = 180.0 if not eclipse else 0.0
+
     elif anomaly_mode == "adcs_oscillation":
         wheel_rpm = 5443.0 + wobble(12) * 850.0 + rpm_offset
         angular_vel = 0.85 + wobble(8) * 0.4
@@ -661,7 +668,18 @@ async def set_anomaly(req: AnomalyRequest):
     
     state.anomaly_mode = req.mode
     
+    if req.mode == "nominal":
+        state.custom_params = {}
+        state.events = []
+        state.pending_commands = []
+        await ws_manager.broadcast({
+            "type": "ANOMALY_RESOLVED",
+            "mode": "nominal"
+        })
+        return {"status": "SUCCESS", "anomaly_mode": "nominal", "event": None, "command": None}
+
     event, cmd = create_anomaly_event_and_command(req.mode)
+
     if event:
         # Deduplicate events by subsystem
         state.events = [e for e in state.events if e.get("subsystem") != event.get("subsystem")]

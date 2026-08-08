@@ -341,10 +341,10 @@ export default function ConstellationDashboard({ latest, history = [], status, e
         ? (
             (latest?.anomalyScore !== undefined && latest.anomalyScore > 0.5) ||
             (latest?.power?.busVoltage !== undefined && latest.power.busVoltage < 21.0) ||
-            (events && events.length > 0) ||
             !!anomalies[sat.id]
           )
         : !!anomalies[sat.id];
+
 
       const liveSoc = isGSAT201 && latest?.power?.stateOfCharge !== undefined
         ? latest.power.stateOfCharge
@@ -457,16 +457,23 @@ export default function ConstellationDashboard({ latest, history = [], status, e
 
   const healthScore = Math.max(20, 100 - (battAlarms * 12 + fuelAlarms * 8 + anomalyCount * 15 + (status === "disconnected" ? 50 : 0)));
 
-  // Selected Node Health Score (dynamically calculated for selected satellite)
+  // Selected Node Health Score (dynamically calculated for selected satellite, climbing gradually as battery recharges)
   const selectedNodeHealthScore = useMemo(() => {
     if (!selectedSatObj) return 100;
+    if (selectedSatObj.isAnomalyActive) {
+      let score = 100;
+      if (selectedSatObj.busVoltage && selectedSatObj.busVoltage < 21.0) score -= 35;
+      if (selectedSatObj.soc < 40) score -= Math.round((40 - selectedSatObj.soc) * 1.2);
+      return Math.max(20, Math.min(65, Math.round(score)));
+    }
+    // Recovery Phase: after stopping anomaly, health index smoothly recharges with battery SoC
     let score = 100;
-    if (selectedSatObj.isAnomalyActive) score -= 35;
-    if (selectedSatObj.soc < 40) score -= Math.round((40 - selectedSatObj.soc) * 1.5);
-    if (selectedSatObj.fuel < 70) score -= Math.round((70 - selectedSatObj.fuel) * 0.5);
+    if (selectedSatObj.soc < 95) score -= Math.round((95 - selectedSatObj.soc) * 0.75);
+    if (selectedSatObj.fuel < 75) score -= Math.round((75 - selectedSatObj.fuel) * 0.4);
     if (status === "disconnected") score -= 20;
-    return Math.max(20, Math.min(100, Math.round(score)));
+    return Math.max(40, Math.min(100, Math.round(score)));
   }, [selectedSatObj, status]);
+
 
 
   // Sparkline history tracking average SoC
@@ -828,20 +835,21 @@ export default function ConstellationDashboard({ latest, history = [], status, e
 
         </div>
 
-        {/* Global alarm message line */}
+        {/* Dynamic global status & recovery banner */}
         <div className={`mt-2 rounded-sm border py-0.5 font-mono text-[0.58rem] font-bold tracking-[0.04em] text-center uppercase ${
-          healthScore >= 75
-            ? "text-nominal border-nominal/20 bg-nominal/5"
-            : healthScore >= 45
-              ? "text-warning border-warning/30 bg-warning/5"
-              : "text-critical border-critical/30 bg-critical/10 animate-pulse"
+          selectedSatObj?.isAnomalyActive
+            ? "text-critical border-critical/40 bg-critical/15 animate-pulse"
+            : selectedSatObj && selectedSatObj.soc < 95
+              ? "text-warning border-warning/40 bg-warning/10"
+              : "text-nominal border-nominal/20 bg-nominal/5"
         }`}>
-          {healthScore >= 75
-            ? "CONSTELLATION OPERATIONAL — ALL PAYLOAD DATA LINKS SECURED"
-            : healthScore >= 45
-              ? "WARNING: MINOR NODE VOLTAGE DROOPS ENCOUNTERED — MONITORING"
-              : "CRITICAL: MULTIPLE NODE VOLTAGE DEVIATIONS OR SHADOW DRIFTS ACTIVE"}
+          {selectedSatObj?.isAnomalyActive
+            ? `CRITICAL: ANOMALY ACTIVE ON NODE ${selectedSatObj.id} — EPS BUS VOLTAGE DROOP (<21.0V)`
+            : selectedSatObj && selectedSatObj.soc < 95
+              ? `RECOVERY PHASE: ANOMALY RESOLVED — BATTERY RECHARGING (${Math.round(selectedSatObj.soc)}%)`
+              : "CONSTELLATION OPERATIONAL — ALL PAYLOAD DATA LINKS SECURED"}
         </div>
+
       </div>
 
     </div>
