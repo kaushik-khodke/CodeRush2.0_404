@@ -8,6 +8,15 @@ import {
   Activity,
   CheckCircle2,
   Terminal,
+  Radio,
+  Cpu,
+  Microscope,
+  BookOpen,
+  Rocket,
+  ClipboardList,
+  Shield,
+  Eye,
+  Scale,
 } from "lucide-react";
 import type { AnomalyEvent, PendingCommand, TelemetryFrame } from "@/lib/smoa/types";
 import { cn } from "@/lib/utils";
@@ -17,12 +26,24 @@ interface AgentNodeDetail {
   name: string;
   role: string;
   subsystem: string;
-  icon: string;
   workedOn: string;
   vote: "APPROVE" | "WARN" | "REJECT";
   confidence: number;
   rationale: string;
 }
+
+const AGENT_ICONS: Record<string, React.ReactNode> = {
+  telemetry_monitor: <Radio className="size-3.5 text-primary shrink-0" />,
+  ml_sentinel: <Cpu className="size-3.5 text-primary shrink-0" />,
+  diagnosis_agent: <Microscope className="size-3.5 text-primary shrink-0" />,
+  rag_recovery: <BookOpen className="size-3.5 text-primary shrink-0" />,
+  future_simulation: <Rocket className="size-3.5 text-primary shrink-0" />,
+  mission_planner: <ClipboardList className="size-3.5 text-primary shrink-0" />,
+  mission_continuation: <Shield className="size-3.5 text-primary shrink-0" />,
+  multimodal_context: <Eye className="size-3.5 text-primary shrink-0" />,
+  flight_director: <Scale className="size-3.5 text-primary shrink-0" />,
+};
+
 
 export function MultiAgentConsensusPanel({
   latest,
@@ -56,7 +77,6 @@ export function MultiAgentConsensusPanel({
         name: "Telemetry Monitor Agent",
         role: "52-Parameter State Vector Ingestion",
         subsystem: "Ingestion Engine",
-        icon: "📡",
         workedOn: `Audited 52 1Hz telemetry channels for ${sub} bounds.`,
         vote: isAnomaly ? "WARN" : "APPROVE",
         confidence: 0.99,
@@ -69,7 +89,6 @@ export function MultiAgentConsensusPanel({
         name: "ML Sentinel Agent",
         role: "Isolation Forest Anomaly Regressor",
         subsystem: "ML Anomaly Engine",
-        icon: "🤖",
         workedOn: `Ran multivariate Isolation Forest & XGBoost risk scoring on live metrics.`,
         vote: isAnomaly ? "WARN" : "APPROVE",
         confidence: 0.94,
@@ -82,7 +101,6 @@ export function MultiAgentConsensusPanel({
         name: "Diagnosis Agent",
         role: "Parallel LLM Multi-Hypothesis Classifier",
         subsystem: "Diagnostics",
-        icon: "🔬",
         workedOn: `Ran Groq / Gemini / OpenAI parallel prompts for root cause classification.`,
         vote: "APPROVE",
         confidence: 0.91,
@@ -95,7 +113,6 @@ export function MultiAgentConsensusPanel({
         name: "RAG Recovery Agent",
         role: "Vector Knowledge Base SOP Retrieval",
         subsystem: "Supabase Knowledge Base",
-        icon: "📚",
         workedOn: `Queried Supabase Vector DB for contingency SOP runbooks matching ${sub}.`,
         vote: "APPROVE",
         confidence: 0.93,
@@ -108,7 +125,6 @@ export function MultiAgentConsensusPanel({
         name: "Future Simulation Agent",
         role: "Basilisk (BSK) Digital Twin Simulator",
         subsystem: "Basilisk Astrodynamics",
-        icon: "🚀",
         workedOn: `Simulated 30-minute BSK state vector trajectory post-recovery command execution.`,
         vote: activeCommand?.constraint?.status === "fail" ? "REJECT" : "APPROVE",
         confidence: 0.92,
@@ -121,7 +137,6 @@ export function MultiAgentConsensusPanel({
         name: "Mission Planner Agent",
         role: "OR-Tools Precedence Constraint Solver",
         subsystem: "Planner Solver",
-        icon: "📋",
         workedOn: `Evaluated OR-Tools CP-SAT schedule precedence & power budget surplus.`,
         vote: "APPROVE",
         confidence: 0.95,
@@ -132,7 +147,6 @@ export function MultiAgentConsensusPanel({
         name: "Mission Continuation Node",
         role: "Degraded Mode Resilience Evaluator",
         subsystem: "Mission Resilience",
-        icon: "🛡️",
         workedOn: `Calculated science throughput vs battery DoD trade-off for degraded operating mode.`,
         vote: "APPROVE",
         confidence: 0.89,
@@ -143,7 +157,6 @@ export function MultiAgentConsensusPanel({
         name: "Multimodal Context Node",
         role: "Cross-Sensor Pointing Verification",
         subsystem: "Cross-Sensor Audit",
-        icon: "👁️",
         workedOn: `Cross-verified optical star tracker telemetry against IMU gyro body rates.`,
         vote: "APPROVE",
         confidence: 0.87,
@@ -154,13 +167,13 @@ export function MultiAgentConsensusPanel({
         name: "Flight Director Chair",
         role: "9-Agent Consensus Synthesizer",
         subsystem: "Consensus Synthesizer",
-        icon: "⚖️",
         workedOn: `Synthesized votes & rationales from 8 child nodes into final flight authorization.`,
         vote: "APPROVE",
         confidence: 0.96,
         rationale: `Synthesized votes from 8 child nodes. Consensus threshold met (9/9 Approved). Authorized recovery plan execution.`,
       },
     ];
+
   }, [busVoltage, cpuTemp, wheelRpm, activeAnomaly, activeCommand, latest]);
 
   // Compute Overall Multi-Agent Consensus Score
@@ -276,7 +289,8 @@ export function MultiAgentConsensusPanel({
                   key={agent.id}
                   className="flex items-start gap-2.5 p-2 rounded-xs border border-border/40 bg-surface/40 hover:bg-surface-raised/40 transition-colors"
                 >
-                  <span className="text-sm shrink-0 mt-0.5">{agent.icon}</span>
+                  <span className="shrink-0 mt-0.5">{AGENT_ICONS[agent.id]}</span>
+
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-tech text-xs font-bold text-foreground uppercase">

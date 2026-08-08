@@ -299,23 +299,23 @@ export default function Satellite({
         </group>
       </group>
 
-      {/* 6. SOLAR ARRAY PANEL WING A (Left) */}
+      {/* 6. SOLAR ARRAY PANEL WING A (Left Wing — 1 of 2) */}
       <group
-        position={[-2.3, 0, 0]}
+        position={[-2.0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
           setSelectedSubsystem && setSelectedSubsystem('panelA');
         }}
       >
         {/* Metallic Yoke & Rotary Hinge Joint */}
-        <mesh position={[1.15, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.07, 0.07, 1.0, 16]} />
+        <mesh position={[1.0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.7, 16]} />
           <meshStandardMaterial color="#d97706" metalness={0.9} roughness={0.2} />
         </mesh>
 
         {/* Carbon Fiber Backing Panel Structure */}
         <mesh castShadow receiveShadow>
-          <boxGeometry args={[2.0, 0.05, 2.6]} />
+          <boxGeometry args={[2.1, 0.04, 1.1]} />
           <meshStandardMaterial
             color={isPanelASelected ? '#38bdf8' : '#0f172a'}
             roughness={0.3}
@@ -324,8 +324,8 @@ export default function Satellite({
         </mesh>
 
         {/* Photovoltaic Silicon Wafer Cells Layer (Top Surface) */}
-        <mesh position={[0, 0.03, 0]}>
-          <planeGeometry args={[1.92, 2.5]} />
+        <mesh position={[0, 0.022, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[2.0, 1.0]} />
           <meshStandardMaterial
             map={solarCellTexture}
             roughness={0.15}
@@ -334,8 +334,8 @@ export default function Satellite({
         </mesh>
 
         {/* Photovoltaic Silicon Wafer Cells Layer (Bottom Surface) */}
-        <mesh position={[0, -0.03, 0]} rotation={[Math.PI, 0, 0]}>
-          <planeGeometry args={[1.92, 2.5]} />
+        <mesh position={[0, -0.022, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[2.0, 1.0]} />
           <meshStandardMaterial
             map={solarCellTexture}
             roughness={0.15}
@@ -344,23 +344,23 @@ export default function Satellite({
         </mesh>
       </group>
 
-      {/* 7. SOLAR ARRAY PANEL WING B (Right) */}
+      {/* 7. SOLAR ARRAY PANEL WING B (Right Wing — 2 of 2) */}
       <group
-        position={[2.3, 0, 0]}
+        position={[2.0, 0, 0]}
         onClick={(e) => {
           e.stopPropagation();
           setSelectedSubsystem && setSelectedSubsystem('panelB');
         }}
       >
         {/* Metallic Yoke & Rotary Hinge Joint */}
-        <mesh position={[-1.15, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.07, 0.07, 1.0, 16]} />
+        <mesh position={[-1.0, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.7, 16]} />
           <meshStandardMaterial color="#d97706" metalness={0.9} roughness={0.2} />
         </mesh>
 
         {/* Carbon Fiber Backing Panel Structure */}
         <mesh castShadow receiveShadow>
-          <boxGeometry args={[2.0, 0.05, 2.6]} />
+          <boxGeometry args={[2.1, 0.04, 1.1]} />
           <meshStandardMaterial
             color={isPanelBSelected ? '#38bdf8' : (panelBStatus === 'NOMINAL' ? '#0f172a' : '#451a03')}
             roughness={0.3}
@@ -369,8 +369,8 @@ export default function Satellite({
         </mesh>
 
         {/* Photovoltaic Silicon Wafer Cells Layer (Top Surface) */}
-        <mesh position={[0, 0.03, 0]}>
-          <planeGeometry args={[1.92, 2.5]} />
+        <mesh position={[0, 0.022, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[2.0, 1.0]} />
           <meshStandardMaterial
             map={solarCellTexture}
             roughness={0.15}
@@ -380,8 +380,8 @@ export default function Satellite({
         </mesh>
 
         {/* Photovoltaic Silicon Wafer Cells Layer (Bottom Surface) */}
-        <mesh position={[0, -0.03, 0]} rotation={[Math.PI, 0, 0]}>
-          <planeGeometry args={[1.92, 2.5]} />
+        <mesh position={[0, -0.022, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[2.0, 1.0]} />
           <meshStandardMaterial
             map={solarCellTexture}
             roughness={0.15}
@@ -393,7 +393,7 @@ export default function Satellite({
         {/* Panel B Status Warning Glow (if impaired) */}
         {panelBStatus !== 'NOMINAL' && (
           <mesh position={[0, 0, 0]}>
-            <boxGeometry args={[2.05, 0.08, 2.65]} />
+            <boxGeometry args={[2.15, 0.06, 1.15]} />
             <meshStandardMaterial
               color={panelBColor}
               emissive={panelBColor}
@@ -404,6 +404,7 @@ export default function Satellite({
           </mesh>
         )}
       </group>
+
     </group>
   );
 }
