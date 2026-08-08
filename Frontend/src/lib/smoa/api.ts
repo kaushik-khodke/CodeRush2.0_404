@@ -62,6 +62,17 @@ export async function authorizeCommand(
   }
 }
 
+export async function setTelemetrySourceApi(source: "simulator" | "digital-twin"): Promise<void> {
+  try {
+    await fetch(getApiUrl("/api/telemetry/source"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source }),
+    });
+  } catch (e) {
+    console.warn("Failed to set telemetry source via backend API, using local state", e);
+  }
+}
 
 export function formatMet(met: number | null | undefined) {
   if (met === null || met === undefined || isNaN(met)) return "000:00:00:00";

@@ -8,13 +8,11 @@ import { TelemetryPanel } from "@/components/smoa/TelemetryPanel";
 import { AttitudeViewer } from "@/components/smoa/AttitudeViewer";
 import { EventFeed } from "@/components/smoa/EventFeed";
 import { ApprovalQueue } from "@/components/smoa/ApprovalQueue";
-import { FaultInjectionPanel } from "@/components/smoa/FaultInjectionPanel";
-import { authorizeCommand, fetchEvents, fetchPendingCommands, formatClock } from "@/lib/smoa/api";
+import { authorizeCommand, fetchEvents, fetchPendingCommands, formatClock, setTelemetrySourceApi } from "@/lib/smoa/api";
 import { useTelemetry } from "@/lib/smoa/useTelemetry";
 import type { AnomalyEvent, FaultInjection, PendingCommand } from "@/lib/smoa/types";
 import { mockAgents } from "@/lib/smoa/mock";
 import { AgentRoster } from "@/components/smoa/AgentRoster";
-import { ConstellationWidget } from "@/components/ConstellationWidget";
 import { MultiAgentConsensusPanel } from "@/components/smoa/MultiAgentConsensusPanel";
 
 const title = "ORION AI — Mission Operations Control";
@@ -113,6 +111,11 @@ function OperationsConsole() {
   const anomalyCount = useMemo(() => events.filter((e) => e.severity !== "info").length, [events]);
   const criticalCount = useMemo(() => events.filter((e) => e.severity === "critical").length, [events]);
 
+  const handleSourceSwitch = useCallback((newSource: "simulator" | "digital-twin") => {
+    setTelemetrySource(newSource);
+    setTelemetrySourceApi(newSource);
+  }, []);
+
   return (
     <div className="min-h-screen min-w-[1280px] flex flex-col bg-background text-foreground overflow-y-auto">
       <TopBar
@@ -122,6 +125,7 @@ function OperationsConsole() {
         criticalCount={criticalCount}
         anomalyScore={latest?.anomalyScore ?? 0.08}
         onToggleAgents={() => setAgentSidebarOpen((prev) => !prev)}
+        onToggleTelemetrySource={() => handleSourceSwitch(telemetrySource === "digital-twin" ? "simulator" : "digital-twin")}
         agentsOpen={agentSidebarOpen}
         telemetrySource={telemetrySource}
       />
@@ -212,7 +216,7 @@ function OperationsConsole() {
         <span className="label-tech">Buffer {history.length}/300 frames</span>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[0.75rem] text-muted-foreground">Simulation mode</span>
-          <Select value={telemetrySource} onValueChange={(value) => setTelemetrySource(value as "simulator" | "digital-twin")}>
+          <Select value={telemetrySource} onValueChange={(value) => handleSourceSwitch(value as "simulator" | "digital-twin")}>
             <SelectTrigger className="h-8 w-[170px] border-border bg-background text-[0.75rem]">
               <SelectValue placeholder="Telemetry source" />
             </SelectTrigger>

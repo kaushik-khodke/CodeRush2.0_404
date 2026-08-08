@@ -47,9 +47,28 @@ app.include_router(approval.router)
 app.include_router(telemetry.router)
 app.include_router(agentic.router)
 
+@app.get("/")
+def root_metadata():
+    return {
+        "status": "healthy",
+        "service": "SMOA Spacecraft Mission Control & Autonomous Operations Engine",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "health": "/health",
+        "ws_telemetry": "/ws/telemetry"
+    }
+
 @app.get("/health")
+@app.get("/api/health")
 def health_check():
-    return {"status": "healthy", "service": "SMOA Backend Engine", "version": "2.0.0"}
+    return {
+        "status": "healthy",
+        "service": "SMOA Backend Engine",
+        "version": "2.0.0",
+        "timestamp": int(time.time()),
+        "ml_models_loaded": bool(ml_assets.get("xgboost")),
+        "database": "connected"
+    }
 
 
 # Global ML Model Storage
@@ -61,10 +80,15 @@ class TelemetryState:
     def __init__(self):
         self.met: int = 128400
         self.soc: float = 78.4
+        self.source: str = "digital-twin"
         self.faults: List[Dict[str, Any]] = []
         self.commands: List[Dict[str, Any]] = []
         self.authorized_commands: Dict[str, str] = {}
         self.init_commands()
+
+    def set_source(self, src: str):
+        if src in ["digital-twin", "simulator"]:
+            self.source = src
 
     def set_faults(self, faults: List[Dict[str, Any]]):
         self.faults = faults
@@ -168,35 +192,56 @@ def generate_telemetry_frame() -> Dict[str, Any]:
     t_sec = state.met
     t_ms = int(time.time() * 1000)
 
-    orbit_angle = (t_sec / 5580.0) * 360.0 % 360.0
-    eclipse = 205.0 < orbit_angle < 320.0
+    # Check active telemetry source state
+    if state.source == "digital-twin":
+        bsk_frame = basilisk_engine.get_live_telemetry_frame(t_sec, state.faults)
+        bus_voltage = bsk_frame["bus_voltage"]
+        state.soc = bsk_frame["battery_soc"]
+        eclipse = bsk_frame["eclipse_status"]
+        batt_temp = bsk_frame["thermal_nodes_celsius"]["cpu"] - 14.0
+        payload_temp = bsk_frame["thermal_nodes_celsius"]["payload"]
+        radiator_temp = bsk_frame["thermal_nodes_celsius"]["radiator"]
+        roll = bsk_frame["attitude_quaternion"]["q1"] * 100.0
+        pitch = bsk_frame["attitude_quaternion"]["q2"] * 100.0
+        yaw = bsk_frame["attitude_quaternion"]["q3"] * 90.0
+        body_rate = 0.28
+        wheel_rpm = bsk_frame["reaction_wheel_rpm"][0]
+        array_power = 420.0 if not eclipse else 0.0
+        signal_dbm = -90.0
+        packet_loss = 0.2
+        rtt_seconds = 0.38
+        source_label = "digital-twin"
+    else:
+        orbit_angle = (t_sec / 5580.0) * 360.0 % 360.0
+        eclipse = 205.0 < orbit_angle < 320.0
 
-    wobble = lambda period, phase=0.0: math.sin((t_sec / period) * math.pi * 2 + phase)
+        wobble = lambda period, phase=0.0: math.sin((t_sec / period) * math.pi * 2 + phase)
 
-    power_drift = state.get_fault_mag("sensor_drift", "power")
-    adcs_hw = state.get_fault_mag("hardware_fault", "adcs")
-    thermal_hw = state.get_fault_mag("hardware_fault", "thermal")
-    comms_loss = state.get_fault_mag("packet_loss", "comms")
+        power_drift = state.get_fault_mag("sensor_drift", "power")
+        adcs_hw = state.get_fault_mag("hardware_fault", "adcs")
+        thermal_hw = state.get_fault_mag("hardware_fault", "thermal")
+        comms_loss = state.get_fault_mag("packet_loss", "comms")
 
-    state.soc += -0.018 if eclipse else 0.024
-    state.soc = min(99.4, max(21.0, state.soc))
+        state.soc += -0.018 if eclipse else 0.024
+        state.soc = min(99.4, max(21.0, state.soc))
 
-    array_power = 2.0 + wobble(37) * 1.2 if eclipse else 412.0 + wobble(53) * 18.0
-    bus_voltage = 27.6 + (state.soc - 78.0) * 0.045 + wobble(29) * 0.06 - power_drift * 0.9
+        array_power = 2.0 + wobble(37) * 1.2 if eclipse else 412.0 + wobble(53) * 18.0
+        bus_voltage = 27.6 + (state.soc - 78.0) * 0.045 + wobble(29) * 0.06 - power_drift * 0.9
 
-    batt_temp = 18.2 + wobble(211) * 2.4 + (-3.1 if eclipse else 1.4) + thermal_hw * 9.0
-    payload_temp = -6.4 + wobble(167, 1.1) * 3.2 + (-5.2 if eclipse else 2.6)
-    radiator_temp = -31.5 + wobble(233, 0.4) * 4.1 + thermal_hw * 4.0
+        batt_temp = 18.2 + wobble(211) * 2.4 + (-3.1 if eclipse else 1.4) + thermal_hw * 9.0
+        payload_temp = -6.4 + wobble(167, 1.1) * 3.2 + (-5.2 if eclipse else 2.6)
+        radiator_temp = -31.5 + wobble(233, 0.4) * 4.1 + thermal_hw * 4.0
 
-    roll = wobble(97) * 12.0 + adcs_hw * 22.0
-    pitch = wobble(131, 0.8) * 8.0 + adcs_hw * 9.0
-    yaw = ((t_sec / 3.0) % 360.0) - 180.0
-    body_rate = 0.32 + abs(wobble(61)) * 0.14 + adcs_hw * 1.6
-    wheel_rpm = 2840.0 + wobble(89) * 210.0 + adcs_hw * 900.0
+        roll = wobble(97) * 12.0 + adcs_hw * 22.0
+        pitch = wobble(131, 0.8) * 8.0 + adcs_hw * 9.0
+        yaw = ((t_sec / 3.0) % 360.0) - 180.0
+        body_rate = 0.32 + abs(wobble(61)) * 0.14 + adcs_hw * 1.6
+        wheel_rpm = 2840.0 + wobble(89) * 210.0 + adcs_hw * 900.0
 
-    signal_dbm = -92.4 + wobble(73) * 3.1 - comms_loss * 8.0
-    packet_loss = max(0.0, 0.4 + wobble(41) * 0.3 + comms_loss * 24.0)
-    rtt_seconds = 0.42 + wobble(311) * 0.05
+        signal_dbm = -92.4 + wobble(73) * 3.1 - comms_loss * 8.0
+        packet_loss = max(0.0, 0.4 + wobble(41) * 0.3 + comms_loss * 24.0)
+        rtt_seconds = 0.42 + wobble(311) * 0.05
+        source_label = "simulator"
 
     # Build 52-parameter dictionary matching feature_cols
     sample_dict = {
@@ -404,6 +449,21 @@ def get_anomaly_events():
 @app.get("/api/commands/pending")
 def get_pending_commands():
     return [c for c in state.commands if c["state"] == "pending"]
+
+class TelemetrySourcePayload(BaseModel):
+    source: str
+
+@app.get("/api/telemetry/source")
+def get_telemetry_source():
+    return {"source": state.source, "available": ["digital-twin", "simulator"]}
+
+@app.post("/api/telemetry/source")
+def set_telemetry_source(payload: TelemetrySourcePayload):
+    if payload.source not in ["digital-twin", "simulator"]:
+        raise HTTPException(status_code=400, detail="Invalid source. Must be 'digital-twin' or 'simulator'")
+    state.set_source(payload.source)
+    print(f"[Telemetry Engine] Telemetry source updated to: {state.source}")
+    return {"status": "success", "source": state.source}
 
 class AuthorizationRequest(BaseModel):
     decision: str

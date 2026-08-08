@@ -56,5 +56,8 @@ __pycache__/
 
 
 .agents
->>>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f:.gitignore
->>>>>>> 7a7444c14ae0f216ed54bb47081019c7acf5857f
+Backend/.env
+Frontend/.env
+*.sqlite
+*.db
+

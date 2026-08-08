@@ -19,6 +19,7 @@ interface TopBarProps {
   criticalCount: number;
   anomalyScore?: number | undefined;
   onToggleAgents?: () => void;
+  onToggleTelemetrySource?: () => void;
   agentsOpen?: boolean;
   showNav?: boolean;
   telemetrySource?: "simulator" | "digital-twin";
@@ -31,6 +32,7 @@ export function TopBar({
   criticalCount,
   anomalyScore,
   onToggleAgents,
+  onToggleTelemetrySource,
   agentsOpen,
   showNav = true,
   telemetrySource = "digital-twin",
@@ -70,7 +72,6 @@ export function TopBar({
         {showNav &&
           [
             { to: "/", label: "Operations" },
-            { to: "/constellation", label: "3D Constellation" },
             { to: "/planner", label: "Mission Planner" },
             { to: "/replay", label: "Digital Twin Replay" },
             { to: "/seeding", label: "Data Seeding" },
@@ -91,19 +92,21 @@ export function TopBar({
           <div className="num text-sm text-foreground">{met === null ? "---:--:--:--" : formatMet(met)}</div>
         </div>
 
-        <div
+        <button
+          onClick={onToggleTelemetrySource}
+          title="Click to toggle backend runtime telemetry feed (BSK Digital Twin vs Local Simulator)"
           className={cn(
-            "flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 transition-colors duration-200",
+            "flex items-center gap-1.5 rounded-sm border px-2.5 py-1.5 transition-all duration-200 cursor-pointer hover:scale-102",
             telemetrySource === "digital-twin"
-              ? "border-primary/40 bg-primary/10 text-primary"
-              : "border-amber-500/40 bg-amber-950/20 text-amber-400"
+              ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+              : "border-amber-500/40 bg-amber-950/20 text-amber-400 hover:bg-amber-950/40"
           )}
         >
           <Satellite className="size-3.5" />
           <span className="font-tech text-[0.68rem] font-bold tracking-[0.08em] uppercase">
             {telemetrySource === "digital-twin" ? "BSK Twin Active" : "Local Simulator Active"}
           </span>
-        </div>
+        </button>
 
 
         {anomalyScore !== undefined && (

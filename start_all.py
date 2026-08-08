@@ -24,8 +24,17 @@ if sys.platform == "win32":
         pass
 
 ROOT_DIR = Path(__file__).parent.resolve()
-FRONTEND_DIR = ROOT_DIR / "frontend"
-BACKEND_DIR = ROOT_DIR / "backend"
+FRONTEND_DIR = ROOT_DIR / "Frontend" if (ROOT_DIR / "Frontend").exists() else ROOT_DIR / "frontend"
+BACKEND_DIR = ROOT_DIR / "Backend" if (ROOT_DIR / "Backend").exists() else ROOT_DIR / "backend"
+
+# Clear outdated Vite cache to prevent 504 Outdated Optimize Dep errors
+vite_cache = FRONTEND_DIR / "node_modules" / ".vite"
+if vite_cache.exists():
+    import shutil
+    try:
+        shutil.rmtree(vite_cache)
+    except Exception:
+        pass
 
 processes = []
 

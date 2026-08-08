@@ -1,0 +1,62 @@
+name: SMOA CI/CD Pipeline & Automated Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Backend Pytest Suite & Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('Backend/requirements.txt') }}
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r Backend/requirements.txt pytest pytest-asyncio httpx
+
+      - name: Run Backend Pytest Test Suite
+        run: |
+          cd Backend
+          pytest tests/ -v
+
+  frontend-build:
+    name: Frontend TypeScript & Vite Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "Frontend/package-lock.json"
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd Frontend
+          npm ci
+
+      - name: Verify Frontend Production Build
+        run: |
+          cd Frontend
+          npm run build

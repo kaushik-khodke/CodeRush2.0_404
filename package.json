@@ -5,8 +5,10 @@
   "scripts": {
     "start": "python start_all.py",
     "dev:all": "python start_all.py",
-    "backend": "cd backend && python main.py",
-    "frontend": "cd frontend && npm run dev",
-    "seeding": "cd frontend && npm run dev:seeding"
+    "backend": "cd Backend && python main.py",
+    "frontend": "cd Frontend && npm run dev",
+    "seeding": "cd Frontend && npm run dev:seeding",
+    "test": "cd Backend && pytest tests/",
+    "setup": "bash setup.sh"
   }
 }
