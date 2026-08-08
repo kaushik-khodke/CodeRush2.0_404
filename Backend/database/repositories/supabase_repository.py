@@ -242,7 +242,40 @@ class SupabaseRepository:
                     except Exception as overflow_err:
                         logger.warning(f"[Supabase Sync Notice] Overflow tasks auto-completion notice: {overflow_err}")
 
-            return items
+            # Remove COMPLETED tasks older than 1 hour (3600 seconds) from queue & database
+            now_dt = datetime.now(timezone.utc)
+            one_hour_ago = now_dt - timedelta(hours=1)
+
+            valid_items = []
+            expired_completed_ids = []
+            for item in items:
+                status = item.get("status")
+                end_time_str = item.get("end_time") or item.get("start_time")
+
+                is_expired_completed = False
+                if status == "COMPLETED" and end_time_str:
+                    try:
+                        clean_str = str(end_time_str).replace("Z", "+00:00")
+                        dt = datetime.fromisoformat(clean_str)
+                        if dt.tzinfo is None:
+                            dt = dt.replace(tzinfo=timezone.utc)
+                        if dt < one_hour_ago:
+                            is_expired_completed = True
+                    except Exception:
+                        pass
+
+                if is_expired_completed and item.get("id"):
+                    expired_completed_ids.append(item.get("id"))
+                else:
+                    valid_items.append(item)
+
+            if expired_completed_ids:
+                try:
+                    client.table("activity_schedules").delete().in_("id", expired_completed_ids).execute()
+                except Exception as del_err:
+                    logger.warning(f"[Supabase Sync Notice] Pruned 1h completed tasks notice: {del_err}")
+
+            return valid_items
         except Exception as e:
             logger.warning(f"[Supabase Sync Warning] Failed to fetch activity schedules: {e}")
             return []

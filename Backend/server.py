@@ -47,6 +47,10 @@ app.include_router(approval.router)
 app.include_router(telemetry.router)
 app.include_router(agentic.router)
 
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "SMOA Backend Engine", "version": "2.0.0"}
+
 
 # Global ML Model Storage
 ml_assets: Dict[str, Any] = {}

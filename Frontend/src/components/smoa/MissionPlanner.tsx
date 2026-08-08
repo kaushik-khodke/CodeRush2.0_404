@@ -150,13 +150,25 @@ export function MissionPlanner() {
   );
 
   const filteredSchedules = useMemo(() => {
+    const oneHourMs = 60 * 60 * 1000;
+    const nowMs = Date.now();
+
+    // Filter out completed tasks older than 1 hour
+    const activeQueue = schedules.filter((s) => {
+      if (s.status === "COMPLETED" || (s.status as string) === "EXPIRED") {
+        const itemTs = (s as any).ts || (s as any).created_at ? new Date((s as any).ts || (s as any).created_at).getTime() : nowMs;
+        if (nowMs - itemTs > oneHourMs) return false;
+      }
+      return true;
+    });
+
     if (filterTab === "ACTIVE") {
-      return schedules.filter((s) => s.status === "IN_PROGRESS" || s.status === "SCHEDULED" || s.status === "FEASIBLE");
+      return activeQueue.filter((s) => s.status === "IN_PROGRESS" || s.status === "SCHEDULED" || s.status === "FEASIBLE");
     }
     if (filterTab === "ARCHIVED") {
-      return schedules.filter((s) => s.status === "COMPLETED" || (s.status as string) === "EXPIRED" || s.status === "FAILED");
+      return activeQueue.filter((s) => s.status === "COMPLETED" || (s.status as string) === "EXPIRED" || s.status === "FAILED");
     }
-    return schedules;
+    return activeQueue;
   }, [schedules, filterTab]);
 
   const handleOptimize = () => {

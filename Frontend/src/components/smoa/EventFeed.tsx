@@ -86,7 +86,7 @@ export function EventFeed({
                             : s.chip,
                         )}
                       >
-                        {(e as any).autoExecuted ? "AUTONOMOUS AI" : e.severity}
+                        {(e as any).autoExecuted ? "AUTO-HEAL (LOW)" : e.severity}
                       </span>
                       <span className="label-tech">{e.subsystem}</span>
                       <span className="num ml-auto text-[0.65rem] text-muted-foreground">{timeAgo(e.ts)}</span>
