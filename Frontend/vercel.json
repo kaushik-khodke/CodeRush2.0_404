@@ -1,14 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/constellation",
-      "destination": "/constellation.html"
-    },
-    {
-      "source": "/seeding",
-      "destination": "/seeding.html"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

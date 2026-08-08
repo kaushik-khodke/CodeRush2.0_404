@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConstellationRouteImport } from './routes/constellation'
 import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as ReplayRouteImport } from './routes/replay'
+import { Route as SeedingRouteImport } from './routes/seeding'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const ReplayRoute = ReplayRouteImport.update({
   path: '/replay',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SeedingRoute = SeedingRouteImport.update({
+  id: '/seeding',
+  path: '/seeding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/constellation': typeof ConstellationRoute
   '/planner': typeof PlannerRoute
   '/replay': typeof ReplayRoute
+  '/seeding': typeof SeedingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/constellation': typeof ConstellationRoute
   '/planner': typeof PlannerRoute
   '/replay': typeof ReplayRoute
+  '/seeding': typeof SeedingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/constellation': typeof ConstellationRoute
   '/planner': typeof PlannerRoute
   '/replay': typeof ReplayRoute
+  '/seeding': typeof SeedingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/constellation' | '/planner' | '/replay'
+  fullPaths: '/' | '/constellation' | '/planner' | '/replay' | '/seeding'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/constellation' | '/planner' | '/replay'
-  id: '__root__' | '/' | '/constellation' | '/planner' | '/replay'
+  to: '/' | '/constellation' | '/planner' | '/replay' | '/seeding'
+  id: '__root__' | '/' | '/constellation' | '/planner' | '/replay' | '/seeding'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   ConstellationRoute: typeof ConstellationRoute
   PlannerRoute: typeof PlannerRoute
   ReplayRoute: typeof ReplayRoute
+  SeedingRoute: typeof SeedingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReplayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/seeding': {
+      id: '/seeding'
+      path: '/seeding'
+      fullPath: '/seeding'
+      preLoaderRoute: typeof SeedingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConstellationRoute: ConstellationRoute,
   PlannerRoute: PlannerRoute,
   ReplayRoute: ReplayRoute,
+  SeedingRoute: SeedingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

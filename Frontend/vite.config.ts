@@ -22,15 +22,6 @@ export default defineConfig({
     ssr: {
       external: ["three", "@react-three/fiber", "@react-three/drei"],
     },
-    build: {
-      rollupOptions: {
-        input: {
-          main: path.resolve(__dirname, "index.html"),
-          constellation: path.resolve(__dirname, "constellation.html"),
-          seeding: path.resolve(__dirname, "seeding.html"),
-        },
-      },
-    },
     server: {
       port: 5173,
       strictPort: true,
