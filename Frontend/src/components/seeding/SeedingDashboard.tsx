@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getApiUrl } from "@/lib/smoa/api";
 import {
   Activity,
   AlertTriangle,
@@ -234,7 +235,7 @@ export function SeedingDashboard() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/status");
+      const res = await fetch(getApiUrl("/api/seeding/status"));
       if (res.ok) {
         const data: StatusResponse = await res.json();
         setStatus(data);
@@ -263,19 +264,19 @@ export function SeedingDashboard() {
 
   const handleStart = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/start", { method: "POST" });
+      const res = await fetch(getApiUrl("/api/seeding/start"), { method: "POST" });
       if (res.ok) {
         addLog("▶ TELEMETRY DATA SEEDING STARTED.");
         fetchStatus();
       }
     } catch {
-      addLog("❌ Failed to reach backend at http://localhost:8000.");
+      addLog("❌ Failed to reach backend.");
     }
   };
 
   const handleStop = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/stop", { method: "POST" });
+      const res = await fetch(getApiUrl("/api/seeding/stop"), { method: "POST" });
       if (res.ok) {
         addLog("⏹ TELEMETRY DATA SEEDING STOPPED COMPLETELY.");
         fetchStatus();
@@ -287,7 +288,7 @@ export function SeedingDashboard() {
 
   const handleStep = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/step", { method: "POST" });
+      const res = await fetch(getApiUrl("/api/seeding/step"), { method: "POST" });
       if (res.ok) {
         addLog("⏭ STEPPED 1 TELEMETRY FRAME.");
         fetchStatus();
@@ -299,7 +300,7 @@ export function SeedingDashboard() {
 
   const handleClear = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/clear", { method: "POST" });
+      const res = await fetch(getApiUrl("/api/seeding/clear"), { method: "POST" });
       if (res.ok) {
         setOffsets({});
         addLog("🔄 PURGED TELEMETRY BUFFER & RESET SEEDING STATE.");
@@ -312,7 +313,7 @@ export function SeedingDashboard() {
 
   const handleSetRate = async (rate_hz: number) => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/rate", {
+      const res = await fetch(getApiUrl("/api/seeding/rate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rate_hz }),
@@ -328,7 +329,7 @@ export function SeedingDashboard() {
 
   const handleSetAnomaly = async (mode: string) => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/anomaly", {
+      const res = await fetch(getApiUrl("/api/seeding/anomaly"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode }),
@@ -344,7 +345,7 @@ export function SeedingDashboard() {
 
   const handleApplyCustomParams = async (paramsToSend = offsets) => {
     try {
-      const res = await fetch("http://localhost:8000/api/seeding/custom", {
+      const res = await fetch(getApiUrl("/api/seeding/custom"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ params: paramsToSend }),

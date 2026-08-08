@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bug, Trash2, Wrench } from "lucide-react";
 import type { FaultInjection, FaultKind, Subsystem } from "@/lib/smoa/types";
+import { getApiUrl } from "@/lib/smoa/api";
 import { cn } from "@/lib/utils";
 
 const kinds: { kind: FaultKind; label: string; subsystem: Subsystem; help: string }[] = [
@@ -35,11 +36,7 @@ export function FaultInjectionPanel({
       else if (subsystem === "thermal") mode = "thermal_overheat";
       else if (subsystem === "comms") mode = "comms_loss";
 
-      const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-        ? "http://localhost:8000"
-        : "";
-
-      fetch(`${apiBase}/api/seeding/anomaly`, {
+      fetch(getApiUrl("/api/seeding/anomaly"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode }),

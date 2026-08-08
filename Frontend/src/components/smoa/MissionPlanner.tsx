@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { mockActivitySchedules, mockCommunicationWindows } from "@/lib/smoa/mockPlanner";
 import { useTelemetry } from "@/lib/smoa/useTelemetry";
+import { getApiUrl } from "@/lib/smoa/api";
 import type { ActivityScheduleItem, CommunicationWindowInfo } from "@/lib/smoa/types";
 import { cn } from "@/lib/utils";
 
@@ -63,12 +64,8 @@ export function MissionPlanner() {
 
   // Fetch dynamic schedules & windows from backend API with 2s live polling
   useEffect(() => {
-    const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-      ? "http://localhost:8000"
-      : "";
-
     const loadPlannerData = () => {
-      fetch(`${apiBase}/api/planner/schedules`)
+      fetch(getApiUrl("/api/planner/schedules"))
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (Array.isArray(data)) {
@@ -105,7 +102,7 @@ export function MissionPlanner() {
         })
         .catch(() => {});
 
-      fetch(`${apiBase}/api/planner/windows`)
+      fetch(getApiUrl("/api/planner/windows"))
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
@@ -235,12 +232,8 @@ export function MissionPlanner() {
       selectionRationale: `User-scheduled for ${timeFormatted} UTC. Net surplus (${netPowerSurplus >= 0 ? "+" : ""}${netPowerSurplus.toFixed(0)}W) verified feasible.`,
     };
 
-    const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-      ? "http://localhost:8000"
-      : "";
-
     // Post to backend API to insert into Supabase
-    fetch(`${apiBase}/api/planner/activities`, {
+    fetch(getApiUrl("/api/planner/activities"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -11,17 +11,17 @@ import type { AnomalyEvent, PendingCommand } from "./types";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function getApiUrl(path: string): string {
+export function getApiUrl(path: string = ""): string {
   if (path.startsWith("http")) return path;
   if (import.meta.env["VITE_API_BASE_URL"]) {
     const base = import.meta.env["VITE_API_BASE_URL"].replace(/\/$/, "");
     return `${base}${path}`;
   }
-  const host = window.location.hostname || "localhost";
-  const baseUrl = window.location.port && window.location.port !== "8000"
-    ? `http://${host}:8000`
-    : "";
-  return `${baseUrl}${path}`;
+  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
+  if (host !== "localhost" && host !== "127.0.0.1") {
+    return `https://smoa-backend.onrender.com${path}`;
+  }
+  return `http://localhost:8000${path}`;
 }
 
 async function getJson<T>(url: string, fallback: () => T): Promise<T> {

@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { PendingCommand, TelemetryFrame } from "@/lib/smoa/types";
+import { getApiUrl } from "@/lib/smoa/api";
 import { AttitudeViewer } from "./AttitudeViewer";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +38,8 @@ export function SimulationPreviewModal({
     if (!commandItem) return;
     setLoading(true);
 
-    const apiBase = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-      ? "http://localhost:8000"
-      : "";
-
     // 1. Fetch 30-Min Future Predictive Basilisk Simulation
-    const fetchFutureSim = fetch(`${apiBase}/api/digital-twin/simulate`, {
+    const fetchFutureSim = fetch(getApiUrl("/api/digital-twin/simulate"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -81,7 +78,7 @@ export function SimulationPreviewModal({
       });
 
     // 2. Fetch Historical Black-Box Telemetry Points
-    const fetchHistory = fetch(`${apiBase}/api/seeding/history`)
+    const fetchHistory = fetch(getApiUrl("/api/seeding/history"))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && Array.isArray(data.history) && data.history.length > 0) {
@@ -312,7 +309,7 @@ export function SimulationPreviewModal({
                     </span>
                   </div>
 
-                  <AttitudeViewer latest={simulatedFrame} status="connected" className="h-[460px] border-none shadow-none" />
+                  <AttitudeViewer latest={simulatedFrame} status="live" className="h-[460px] border-none shadow-none" />
                 </div>
 
                 {/* Live Predictive / Replay Telemetry Gauges (5 Cols) */}

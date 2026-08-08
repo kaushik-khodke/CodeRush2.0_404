@@ -60,13 +60,15 @@ export function useTelemetry(faults: FaultInjection[], source: "simulator" | "di
     try {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.hostname || "localhost";
+      const defaultWsUrl = host !== "localhost" && host !== "127.0.0.1"
+        ? "wss://smoa-backend.onrender.com/ws/telemetry"
+        : `${proto}//${host}:8000/ws/telemetry`;
+
       const wsUrl = import.meta.env["VITE_WS_URL"]
         ? import.meta.env["VITE_WS_URL"]
         : import.meta.env["VITE_API_BASE_URL"]
           ? `${import.meta.env["VITE_API_BASE_URL"].replace(/^http/, "ws").replace(/\/$/, "")}/ws/telemetry`
-          : window.location.port && window.location.port !== "8000"
-            ? `${proto}//${host}:8000/ws/telemetry`
-            : `${proto}//${window.location.host}/ws/telemetry`;
+          : defaultWsUrl;
 
       socket = new WebSocket(wsUrl);
 
