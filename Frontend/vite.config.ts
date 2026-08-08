@@ -6,6 +6,12 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -15,6 +21,15 @@ export default defineConfig({
   vite: {
     ssr: {
       external: ["three", "@react-three/fiber", "@react-three/drei"],
+    },
+    build: {
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, "index.html"),
+          constellation: path.resolve(__dirname, "constellation.html"),
+          seeding: path.resolve(__dirname, "seeding.html"),
+        },
+      },
     },
     server: {
       port: 5173,

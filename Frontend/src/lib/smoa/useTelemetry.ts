@@ -60,10 +60,13 @@ export function useTelemetry(faults: FaultInjection[], source: "simulator" | "di
     try {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.hostname || "localhost";
-      // Try direct backend port 8000 first, fallback to proxy
-      const wsUrl = window.location.port && window.location.port !== "8000"
-        ? `${proto}//${host}:8000/ws/telemetry`
-        : `${proto}//${window.location.host}/ws/telemetry`;
+      const wsUrl = import.meta.env["VITE_WS_URL"]
+        ? import.meta.env["VITE_WS_URL"]
+        : import.meta.env["VITE_API_BASE_URL"]
+          ? `${import.meta.env["VITE_API_BASE_URL"].replace(/^http/, "ws").replace(/\/$/, "")}/ws/telemetry`
+          : window.location.port && window.location.port !== "8000"
+            ? `${proto}//${host}:8000/ws/telemetry`
+            : `${proto}//${window.location.host}/ws/telemetry`;
 
       socket = new WebSocket(wsUrl);
 
@@ -114,7 +117,7 @@ export function useTelemetry(faults: FaultInjection[], source: "simulator" | "di
           .on(
             "postgres_changes",
             { event: "INSERT", schema: "public", table: "telemetry_data" },
-            (payload) => {
+            (payload: { new: Record<string, any>; }) => {
               if (payload.new && socket?.readyState !== WebSocket.OPEN) {
                 const row = payload.new as Record<string, any>;
                 if (row) {

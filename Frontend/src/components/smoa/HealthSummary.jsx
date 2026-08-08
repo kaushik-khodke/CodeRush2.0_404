@@ -1,5 +1,12 @@
 import { useMemo } from "react";
 
+/**
+ * @param {{
+ *   latest?: import('../../lib/smoa/types').TelemetryFrame | null,
+ *   history?: import('../../lib/smoa/types').TelemetryFrame[],
+ *   status?: import('../../lib/smoa/types').LinkStatus
+ * }} props
+ */
 export default function HealthSummary({ latest, history = [], status }) {
   // 1. Calculate health score derived from anomalyScore
   const healthScore = useMemo(() => {

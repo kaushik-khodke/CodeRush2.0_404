@@ -1,16 +1,25 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { TopBar } from "./components/smoa/TopBar";
 import ConstellationDashboard from "./components/smoa/ConstellationDashboard";
 import { useTelemetry } from "./lib/smoa/useTelemetry";
+import { fetchEvents } from "./lib/smoa/api";
+import type { AnomalyEvent } from "./lib/smoa/types";
 import "./styles.css";
 
 
 function ConstellationApp() {
-  const { status, history, latest, events } = useTelemetry([]);
+  const { status, history, latest } = useTelemetry([]);
+  const [events, setEvents] = useState<AnomalyEvent[]>([]);
+
+  useEffect(() => {
+    fetchEvents()
+      .then((e) => setEvents(e.sort((a, b) => b.ts - a.ts)))
+      .catch(() => {});
+  }, []);
 
   const isLiveAnomaly = (latest?.anomalyScore !== undefined && latest.anomalyScore > 0.5) || (latest?.power?.busVoltage !== undefined && latest.power.busVoltage < 21.0);
-  const activeEvents = events?.filter((e) => !e.resolved && (Date.now() - e.ts) < 30000) ?? [];
+  const activeEvents = events?.filter((e: any) => !e.resolved && (Date.now() - e.ts) < 30000) ?? [];
   const anomalyCount = isLiveAnomaly ? 1 : activeEvents.length;
   const criticalCount = (latest?.power?.busVoltage !== undefined && latest.power.busVoltage < 21.0) ? 1 : activeEvents.filter((e) => e.severity === "critical").length;
 

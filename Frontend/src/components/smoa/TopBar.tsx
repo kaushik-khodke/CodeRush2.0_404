@@ -17,7 +17,7 @@ interface TopBarProps {
   met: number | null;
   anomalyCount: number;
   criticalCount: number;
-  anomalyScore?: number;
+  anomalyScore?: number | undefined;
   onToggleAgents?: () => void;
   agentsOpen?: boolean;
   showNav?: boolean;
@@ -70,16 +70,18 @@ export function TopBar({
         {showNav &&
           [
             { to: "/", label: "Operations" },
+            { to: "/constellation", label: "3D Constellation" },
             { to: "/planner", label: "Mission Planner" },
             { to: "/replay", label: "Digital Twin Replay" },
+            { to: "/seeding", label: "Data Seeding" },
           ].map((item) => (
-            <a
+            <Link
               key={item.to}
-              href={item.to}
-              className="rounded-sm px-3 py-1.5 font-tech text-[0.7rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase transition-colors duration-150 hover:bg-surface-raised hover:text-foreground"
+              to={item.to}
+              className="rounded-sm px-2.5 py-1.5 font-tech text-[0.68rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase transition-colors duration-150 hover:bg-surface-raised hover:text-foreground [&.active]:bg-surface-raised [&.active]:text-primary"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
       </nav>
 

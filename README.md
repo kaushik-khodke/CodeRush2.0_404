@@ -1,133 +1,176 @@
-# 🛰️ SMOA: Autonomous Space Satellite Mission Operations & 3D Digital Twin System
+# CodeRush 2.0 | Team Project Repository
 
-> **CodeRush 2.0 Hackathon Entry** · *Autonomous Multi-Agent Satellite Operations, Fault Isolation, Basilisk Astrodynamics Digital Twin & Langfuse Observability*
-
----
-
-## 🌟 Executive Summary
-
-**SMOA (Space Mission Operations Automator)** is a production-grade, multi-agent AI mission control architecture designed for autonomous satellite fleet monitoring, predictive fault isolation, 3D Digital Twin simulation, and automated anomaly self-healing.
-
-Powered by a **9-Agent LangGraph Pipeline**, **Basilisk (BSK) Astrodynamics Simulator**, **Supabase Vector RAG SOP Retrieval**, **Google OR-Tools CP-SAT Solver**, and **Langfuse Cloud Tracing**, SMOA converts raw 52-parameter 1Hz spacecraft telemetry streams into real-time consensus decisions, 30-minute predictive trajectory validations, and autonomous recovery execution without human intervention.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?logo=fastapi&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)
 
 ---
 
-## 🏗️ System Architecture & 9-Agent Workflow
+## 📌 Project Information
+
+- **Team Name**: Team 404
+- **Project Title**: **ORION AI — Spacecraft Mission Control & Autonomous Operations (SMOA)**
+- **Track / Theme**: Autonomous Spacecraft Systems / Aerospace Machine Learning & Multi-Agent AI
+
+---
+
+## 🔗 Live Deployment & Production Portals
+
+The complete system is live in production across **Vercel** (Frontend Apps) and **Render** (Backend API & Telemetry WebSockets):
+
+| Portal / Service | Production Link | Description |
+| :--- | :--- | :--- |
+| 🌐 **Main Operations Console** | [https://code-rush2-0-404.vercel.app/](https://code-rush2-0-404.vercel.app/) | Primary spacecraft telemetry, ML sentinels, 3D attitude viewer & multi-agent consensus |
+| 🛰️ **3D Constellation Tracker** | [https://code-rush2-0-404.vercel.app/constellation](https://code-rush2-0-404.vercel.app/constellation) | Real-time orbital mechanics, ground contact passes, and satellite constellation visualization |
+| ⚡ **Data Seeding Controller** | [https://code-rush2-0-404.vercel.app/seeding](https://code-rush2-0-404.vercel.app/seeding) | Interactive fault injection and high-frequency telemetry dataset streaming controller |
+| ⚙️ **FastAPI Backend API Docs** | [https://smoa-backend.onrender.com/docs](https://smoa-backend.onrender.com/docs) | Interactive Swagger UI API documentation and REST endpoints |
+| 📡 **WebSocket Telemetry Stream** | `wss://smoa-backend.onrender.com/ws/telemetry` | 1 Hz high-frequency 52-parameter real-time telemetry stream |
+
+---
+
+## 💡 Project Description
+
+**ORION AI (Spacecraft Mission Operations Automator)** is an aerospace-grade **Autonomous Satellite Mission Control & Multi-Agent AI System**. It monitors high-frequency 52-parameter satellite telemetry streams, performs real-time machine learning anomaly detection, executes parallel multi-LLM diagnostic reasoning, evaluates physical constraint trust metrics, runs high-fidelity 3D Digital Twin physics simulations, and enforces strict human-in-the-loop command safety gates.
+
+### 🌟 Key Technical Innovations
+
+1. **Dual ML Sentinel Engine**: Uses an **XGBoost 5-class failure classifier** alongside an **Isolation Forest anomaly detector** for real-time risk scoring ($1\text{ Hz}$). LLMs are strictly prohibited from raw classification—ML provides objective ground truth.
+2. **Multi-LLM Multi-Agent Consensus**: Orchestrates parallel agent reasoning using **Groq, Gemini, OpenAI, and Ollama** via LangGraph to cross-validate diagnostic hypotheses and prevent hallucination in critical mission decisions.
+3. **3D Orbit & Attitude Digital Twin**: Full 3D WebGL (Three.js / React Three Fiber) spatial visualization of satellite body rates, quaternions, orbital elements, ground station contact passes, and solar vectors.
+4. **Human-in-the-Loop Warden Gate**: Enforces cryptographic signatures (SHA-256) and approval queues for high-risk autonomous recovery procedures before hardware command execution.
+
+---
+
+## 🛠️ Technical Stack
+
+### **Frontend Infrastructure**
+- **Core Framework**: React 19, TypeScript 5.8, Vite
+- **Styling & Components**: Vanilla CSS + TailwindCSS v4, Radix UI Primitives, Lucide Icons, Framer Motion
+- **3D Visualization**: Three.js, React Three Fiber (`@react-three/fiber`), Drei (`@react-three/drei`)
+- **Routing & State**: TanStack Router, TanStack React Query
+
+### **Backend Infrastructure**
+- **Framework**: Python 3.11+, FastAPI, Uvicorn, Async Pydantic v2
+- **Database & Persistence**: Supabase Cloud PostgreSQL (14 Schema Tables, CDC Realtime WebSockets), Async SQLAlchemy, SQLite Fallback (`mission_control.db`)
+- **Machine Learning & Math**: PyTorch, Scikit-Learn, XGBoost, NumPy, Pandas, Google OR-Tools
+- **Agentic AI & Observability**: LangGraph, LangChain, LangChain-Groq, Langfuse Tracing
+
+---
+
+## 📐 End-to-End System Architecture
 
 ```mermaid
 graph TD
-    A["📡 1Hz Spacecraft Telemetry Stream (52 Params)"] --> B["Node 1: Telemetry Monitor Agent"]
-    B --> C["Node 2: ML Sentinel Agent (Isolation Forest & XGBoost)"]
-    C -->|Anomaly Score ≥ 0.60| D["Node 3: Multi-LLM Diagnosis Agent (Groq / Gemini / OpenAI)"]
-    D --> E["Node 4: RAG Recovery Agent (Supabase Vector DB SOPs)"]
-    E --> F["Node 5: Future Simulation Agent (Basilisk 3D Astrodynamics Twin)"]
-    F --> G["Node 6: Mission Planner Agent (OR-Tools CP-SAT Solver)"]
-    G --> H["Node 7: Mission Continuation Evaluator (Science vs DoD Trade-off)"]
-    H --> I["Node 8: Multimodal Context Node (Optical Star Tracker vs IMU Gyro)"]
-    I --> J["Node 9: Flight Director Consensus Chair (llama-3.3-70b-versatile)"]
-    J -->|Autonomous Safety Approved| K["⚡ Execution & Auto-Healing (2s Nominal Baseline Restore)"]
-    J -->|Operator Review Required| L["📋 Pending Human Operator Approval Queue"]
-    J --> M["📊 Langfuse Cloud Tracing (us.cloud.langfuse.com)"]
+    subgraph Data Sources
+        Sim["Basilisk Digital Twin / Simulator"]
+        Seed["Data Seeding Controller"]
+    end
+
+    subgraph Backend Engine ["FastAPI Backend & ML Pipeline"]
+        Bridge["Telemetry Stream (1Hz Websockets)"]
+        ML["ML Sentinel (XGBoost + Isolation Forest)"]
+        Context["Context Packaging Engine"]
+        MultiAgent["Multi-LLM Agent Consensus (Groq / Gemini)"]
+        Trust["Trust & Safety Warden (SHA-256 Gate)"]
+    end
+
+    subgraph Persistence
+        SupaDB[("Supabase PostgreSQL DB")]
+    end
+
+    subgraph Frontend Portals ["Vercel Single-Page Frontend"]
+        OpsConsole["Operations Console (/)"]
+        Constellation["3D Constellation Tracker (/constellation)"]
+        SeedingUI["Data Seeding Controller (/seeding)"]
+    end
+
+    Sim --> Bridge
+    Seed --> Bridge
+    Bridge --> SupaDB
+    Bridge --> ML
+    ML --> Context
+    Context --> MultiAgent
+    MultiAgent --> Trust
+    Trust --> OpsConsole
+    OpsConsole --> Constellation
+    OpsConsole --> SeedingUI
 ```
 
-### 🤖 9-Agent Node Roles & Responsibilities
+---
 
-| Node ID | Agent Name | Core Subsystem & Technology | Responsibilities |
-|---|---|---|---|
-| **Node 1** | **Telemetry Monitor Agent** | 52-Param Ingestion Engine | Audits 52 1Hz state vector parameters against certified 3σ variance envelopes. |
-| **Node 2** | **ML Sentinel Agent** | Isolation Forest & XGBoost | Evaluates multivariate anomaly scores ($0.00 \rightarrow 1.00$). Triggers diagnosis if score $\ge 0.60$. |
-| **Node 3** | **Diagnosis Agent** | Groq / Gemini / OpenAI Parallel LLMs | Runs parallel LLM provider prompts to pinpoint root causes & competing hypotheses. |
-| **Node 4** | **RAG Recovery Agent** | Supabase Vector Database | Queries pgvector knowledge base for contingency Standard Operating Procedures (SOPs). |
-| **Node 5** | **Future Simulation Agent** | Basilisk (BSK) Astrodynamics Engine | Runs 30-minute predictive rigid body kinematics & EPS power node equations ($T+00\text{m} \rightarrow T+30\text{m}$). |
-| **Node 6** | **Mission Planner Agent** | Google OR-Tools CP-SAT Solver | Solves schedule precedence, power budget surplus, and downlink window constraints. |
-| **Node 7** | **Mission Continuation Node** | Mission Resilience Evaluator | Calculates science throughput vs battery Depth-of-Discharge (DoD) trade-off bounds. |
-| **Node 8** | **Multimodal Context Node** | Cross-Sensor Audit | Cross-verifies optical star tracker pointing vectors against IMU gyro body rates. |
-| **Node 9** | **Flight Director Consensus Chair** | llama-3.3-70b-versatile | Synthesizes votes from 8 child nodes into final flight recommendation & trust score (/100). |
+## 📦 Project Directory Structure
+
+```text
+CodeRush2.0_404/
+├── Backend/                    # FastAPI Server & Machine Learning Core
+│   ├── agentic/                # LangGraph Multi-Agent Consensus Engine
+│   ├── checkpoints/            # Trained PyTorch & XGBoost ML Models (.pkl, .pth)
+│   ├── database/               # SQLAlchemy Models & Supabase Client
+│   ├── routers/                # FastAPI Endpoints (Telemetry, Seeding, Predict, Mission)
+│   ├── telemetry_ml/           # Anomaly Detection & Explainable AI (SHAP)
+│   ├── server.py               # Main FastAPI Application & WebSockets (/ws/telemetry)
+│   ├── requirements.txt        # Python Dependencies
+│   └── render.yaml             # Render Blueprint Configuration
+├── Frontend/                   # React 19 + TypeScript + Three.js App
+│   ├── src/
+│   │   ├── components/         # Reusable UI & 3D Twin Components
+│   │   ├── lib/smoa/           # Telemetry Hooks, WebSockets, API Services
+│   │   ├── routes/             # TanStack Router Pages (index, constellation, seeding, planner, replay)
+│   │   └── constellation-main.tsx
+│   ├── index.html              # Main Console Entry Point
+│   ├── constellation.html      # 3D Constellation Tracker Entry Point
+│   ├── seeding.html            # Data Seeding Entry Point
+│   ├── vercel.json             # Vercel Production SPA Rewrite Rules
+│   └── package.json            # Node Dependencies & Scripts
+├── simulator/                  # Digital Twin Telemetry & Orbit Generators
+├── start_all.py                # Unified Local Development Orchestrator
+└── README.md                   # Project Documentation
+```
 
 ---
 
-## ⚡ Autonomous AI Self-Healing Anomalies (Zero Human Intervention)
+## ⚡ Setup and Installation
 
-SMOA features 3 deterministic autonomous recovery profiles that self-heal satellite systems with **0% human intervention**:
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/CodeRush2.0_404.git
+cd CodeRush2.0_404
+```
 
-1. **`reaction_wheel_desat` (ADCS Reaction Wheel Momentum Saturation)**:
-   - **Trigger**: Reaction wheel 3 angular velocity reaches $5,200\text{ RPM}$ ($1.45\text{ Nms}$ stored momentum).
-   - **AI Recovery**: Automatically fires B-field magnetorquer coils (`ADCS_AUTONOMOUS_MAGNETORQUER_DESAT`), dumps excess momentum, and restores nominal baseline in 2.0s.
-   - **Severity**: `LOW`
+### 2. Configure Environment Variables
 
-2. **`ssr_buffer_flush` (Solid-State Recorder Storage Capacity Alert)**:
-   - **Trigger**: Solid-State Data Recorder memory reaches $92\%$ capacity ($44.1\text{ GB} / 48\text{ GB}$).
-   - **AI Recovery**: Automatically compresses telemetry log archives (`SSR_AUTONOMOUS_COMPRESS_AND_FLUSH`), releasing $12.4\text{ GB}$ storage.
-   - **Severity**: `LOW`
+Create `Backend/.env`:
+```ini
+SUPABASE_URL=https://your-supabase-project.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/postgres
+GROQ_API_KEY=your-groq-api-key
+GEMINI_API_KEY=your-gemini-api-key
+HOST=0.0.0.0
+PORT=8000
+```
 
-3. **`payload_heater_cycle` (Payload Camera Cold Excursion)**:
-   - **Trigger**: Payload camera optical sensor temperature drops to $-5.2^\circ\text{C}$ in orbital shadow.
-   - **AI Recovery**: Automatically cycles payload zone-1 operational heater (`THERMAL_AUTONOMOUS_ZONE_HEATER_ON`) for 180s.
-   - **Severity**: `LOW`
+Create `Frontend/.env`:
+```ini
+VITE_API_BASE_URL=http://localhost:8000
+VITE_WS_URL=ws://localhost:8000/ws/telemetry
+```
 
----
-
-## 🌐 Microservice Port Mappings & Services
-
-| Service Name | Technology Stack | Port | Endpoint URL | Description |
-|---|---|---|---|---|
-| **FastAPI Core Backend** | Python 3.11, FastAPI, Uvicorn | `8000` | `http://localhost:8000` | REST API, WebSocket streams, LangGraph & OR-Tools |
-| **SMOA Control Console** | TanStack Start, React 19, Three.js, Tailwind v4 | `5173` | `http://localhost:5173` | Main Flight Control Dashboard & 3D Digital Twin Viewer |
-| **Seeding Controller UI** | Vite, React 19, Tailwind v4 | `5174` | `http://localhost:5174` | Anomaly Injection & Live Telemetry Parameter Offsets |
-| **3D Constellation Service** | Python, FastAPI, WebSockets | `8001` | `http://localhost:8001` | Multi-Satellite Constellation Orbit Tracker |
-
----
-
-## 🚀 Quickstart & Setup Guide
-
-### 1. Prerequisites
-- **Python**: 3.10 or higher
-- **Node.js**: v18 or higher (`npm`)
-
-### 2. Single-Command Launcher (Clean Boot)
-Run the automated multi-process orchestrator from the project root:
+### 3. Run Locally (Unified Launcher)
+You can launch all services (Backend + Main Console + Constellation Tracker + Seeding App) with a single command:
 
 ```bash
+# Using Python Unified Launcher
 python start_all.py
 ```
-
-This single command automatically:
-1. Validates Python & Node.js environment dependencies.
-2. Starts the **FastAPI Backend** on `http://localhost:8000`.
-3. Starts the **3D Constellation Tracker** on `http://localhost:8001`.
-4. Starts the **Data Seeding Controller** on `http://localhost:5174`.
-5. Starts the **SMOA Main Control Console** on `http://localhost:5173`.
+This automatically boots:
+- ⚙️ **FastAPI Backend & WebSockets**: `http://localhost:8000`
+- 🌐 **Main Mission Console**: `http://localhost:5173`
+- ⚡ **Data Seeding Controller**: `http://localhost:5174`
+- 🛰️ **3D Constellation Tracker**: `http://localhost:5175`
 
 ---
 
-## 📡 API Endpoints Quick Reference
-
-### Core Telemetry & Anomaly Triggering
-- `GET /health` — Returns system health status and registered model counts.
-- `POST /api/seeding/anomaly` — Triggers simulated spacecraft anomaly mode (`power_droop`, `adcs_oscillation`, `reaction_wheel_desat`, `ssr_buffer_flush`, `payload_heater_cycle`, etc.).
-- `POST /api/digital-twin/simulate` — Runs 30-minute predictive Basilisk astrodynamics trajectory preview.
-- `GET /api/planner/schedules` — Retrieves dynamic mission activity schedules (enforces **Max 9 Active Tasks Rule** with 1-hour auto-pruning).
-- `GET /api/events` — Returns reverse chronological list of anomaly events and rich LLM diagnoses.
-- `GET /api/commands/pending` — Returns holding queue of pending flight commands awaiting authorization.
-
----
-
-## 🧪 Testing Discipline
-
-Run the automated Pytest test suite from the project root:
-
-```bash
-pytest backend/tests/test_full_suite.py -v
-```
-
-Run the frontend compilation check:
-
-```bash
-cd frontend && npm run build
-```
-
----
-
-## 📄 License & Attribution
-
-Developed for the **CodeRush 2.0 Hackathon**. Built with FastAPI, LangGraph, Basilisk Digital Twin, Supabase, TanStack Start, React 19, Three.js, and Langfuse Cloud.

@@ -13,6 +13,10 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function getApiUrl(path: string): string {
   if (path.startsWith("http")) return path;
+  if (import.meta.env["VITE_API_BASE_URL"]) {
+    const base = import.meta.env["VITE_API_BASE_URL"].replace(/\/$/, "");
+    return `${base}${path}`;
+  }
   const host = window.location.hostname || "localhost";
   const baseUrl = window.location.port && window.location.port !== "8000"
     ? `http://${host}:8000`

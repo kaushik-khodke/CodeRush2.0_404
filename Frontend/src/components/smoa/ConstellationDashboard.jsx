@@ -260,6 +260,14 @@ function Constellation3DInner({ latest, activeSatellites, sunDirection, selected
 }
 
 // Main Dashboard Component
+/**
+ * @param {{
+ *   latest?: import('../../lib/smoa/types').TelemetryFrame | null,
+ *   history?: import('../../lib/smoa/types').TelemetryFrame[],
+ *   status?: import('../../lib/smoa/types').LinkStatus,
+ *   events?: import('../../lib/smoa/types').AnomalyEvent[]
+ * }} props
+ */
 export default function ConstellationDashboard({ latest, history = [], status, events = [] }) {
   const met = latest?.met ?? 128400;
 
