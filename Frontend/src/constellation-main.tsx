@@ -9,8 +9,11 @@ import "./styles.css";
 function ConstellationApp() {
   const { status, history, latest, events } = useTelemetry([]);
 
-  const anomalyCount = (events?.length ?? 0) > 0 ? events.length : (latest?.anomalyScore && latest.anomalyScore > 0.5 ? 1 : 0);
-  const criticalCount = events?.filter((e) => e.severity === "critical").length ?? (latest?.power?.busVoltage && latest.power.busVoltage < 21.0 ? 1 : 0);
+  const isLiveAnomaly = (latest?.anomalyScore !== undefined && latest.anomalyScore > 0.5) || (latest?.power?.busVoltage !== undefined && latest.power.busVoltage < 21.0);
+  const activeEvents = events?.filter((e) => !e.resolved && (Date.now() - e.ts) < 30000) ?? [];
+  const anomalyCount = isLiveAnomaly ? 1 : activeEvents.length;
+  const criticalCount = (latest?.power?.busVoltage !== undefined && latest.power.busVoltage < 21.0) ? 1 : activeEvents.filter((e) => e.severity === "critical").length;
+
 
   return (
     <div className="flex h-screen min-w-[1280px] flex-col bg-background">

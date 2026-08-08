@@ -59,7 +59,13 @@ export function useTelemetry(faults: FaultInjection[], source: "simulator" | "di
 
     try {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-      socket = new WebSocket(`${proto}//${window.location.host}/ws/telemetry`);
+      const host = window.location.hostname || "localhost";
+      // Try direct backend port 8000 first, fallback to proxy
+      const wsUrl = window.location.port && window.location.port !== "8000"
+        ? `${proto}//${host}:8000/ws/telemetry`
+        : `${proto}//${window.location.host}/ws/telemetry`;
+
+      socket = new WebSocket(wsUrl);
 
       fallbackTimer = setTimeout(() => {
         if (socket && socket.readyState !== WebSocket.OPEN) {
@@ -73,6 +79,7 @@ export function useTelemetry(faults: FaultInjection[], source: "simulator" | "di
         setLastError(null);
         setStatus("live");
       };
+
       socket.onmessage = (evt) => {
         try {
           const parsed = JSON.parse(evt.data as string);

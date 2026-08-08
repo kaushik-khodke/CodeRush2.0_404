@@ -1,9 +1,10 @@
-import { Suspense, useRef } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import * as THREE from "three";
 import type { AdcsFrame } from "@/lib/smoa/types";
 import { getPositionAtTime } from "@/lib/orbit";
+import Satellite from "@/components/twin3d/Satellite";
 
 const DEG = Math.PI / 180;
 
@@ -33,75 +34,41 @@ function Spacecraft({
     g.quaternion.slerp(q, Math.min(1, delta * 4));
   });
 
-  // Calculate dynamic thermal heatmap color
-  const bodyColor = showThermalHeatmap
-    ? cpuTemp > 65.0
-      ? "#E54D42"
-      : cpuTemp > 48.0
-      ? "#D9A441"
-      : "#1F6F78"
-    : "#8A9099";
+  const frame = attitude?.current as any;
+  const isCritical = frame?.power?.busVoltage !== undefined
+    ? frame.power.busVoltage < 21.0
+    : (frame?.anomalyScore !== undefined && frame.anomalyScore > 0.5);
+
 
   return (
     <group ref={group}>
-      {/* Bus */}
-      <mesh castShadow>
-        <boxGeometry args={[1.1, 1.4, 1.1]} />
-        <meshStandardMaterial color={bodyColor} metalness={0.75} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[1.14, 0.28, 1.14]} />
-        <meshStandardMaterial color="#1F6F78" metalness={0.5} roughness={0.4} />
-      </mesh>
+      {/* High-definition 3D Satellite with Space-Grade Gold MLI & Solar Cell Textures */}
+      <group scale={1.15}>
+        <Satellite
+          batteryStatus={isCritical ? "CRITICAL" : showThermalHeatmap && cpuTemp > 50 ? "CAUTION" : "NOMINAL"}
+          panelBStatus="NOMINAL"
+        />
+      </group>
 
-      {/* Solar arrays */}
-      {[-1, 1].map((s) => (
-        <group key={s} position={[s * 1.95, 0, 0]}>
-          <mesh>
-            <boxGeometry args={[2.6, 0.04, 1.0]} />
-            <meshStandardMaterial color="#16303B" metalness={0.4} roughness={0.25} />
-          </mesh>
-          <mesh position={[0, 0.03, 0]}>
-            <boxGeometry args={[2.5, 0.01, 0.9]} />
-            <meshStandardMaterial color="#1F6F78" emissive="#123A40" metalness={0.6} roughness={0.2} />
-          </mesh>
-          <mesh position={[-s * 1.35, 0, 0]}>
-            <cylinderGeometry args={[0.05, 0.05, 0.6, 12]} />
-            <meshStandardMaterial color="#6B717A" metalness={0.8} roughness={0.3} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* High-gain antenna */}
-      <mesh position={[0, 0.95, 0]} rotation={[Math.PI, 0, 0]}>
-        <coneGeometry args={[0.42, 0.34, 24, 1, true]} />
-        <meshStandardMaterial color="#D3D6DA" metalness={0.5} roughness={0.5} side={THREE.DoubleSide} />
-      </mesh>
-
-      {/* Payload optics */}
-      <mesh position={[0, -0.9, 0]}>
-        <cylinderGeometry args={[0.22, 0.28, 0.5, 20]} />
-        <meshStandardMaterial color="#2B2F36" metalness={0.6} roughness={0.4} />
-      </mesh>
 
       {/* ☀️ Sun Vector Visualizer */}
       {showSunVector && (
-        <group position={[0, 1.5, 2.0]}>
-          <cylinderGeometry args={[0.02, 0.02, 2.5, 8]} />
-          <meshBasicMaterial color="#FFD700" transparent opacity={0.8} />
+        <group position={[0, 1.8, 2.2]}>
+          <cylinderGeometry args={[0.02, 0.02, 3.0, 8]} />
+          <meshBasicMaterial color="#FFD700" transparent opacity={0.85} />
         </group>
       )}
 
       {/* 📷 Payload Ground Sensor Cone */}
       {showSensorCone && (
-        <mesh position={[0, -2.5, 0]}>
-          <coneGeometry args={[1.2, 3.0, 32, 1, true]} />
-          <meshBasicMaterial color="#00FFFF" transparent opacity={0.18} side={THREE.DoubleSide} />
+        <mesh position={[0, -2.8, 0]}>
+          <coneGeometry args={[1.4, 3.6, 32, 1, true]} />
+          <meshBasicMaterial color="#38bdf8" transparent opacity={0.22} side={THREE.DoubleSide} />
         </mesh>
       )}
 
       {/* Body axes */}
-      <axesHelper args={[2.2]} />
+      <axesHelper args={[2.4]} />
     </group>
   );
 }
@@ -115,7 +82,7 @@ function OrbitTrack({
 }) {
   const marker = useRef<THREE.Mesh>(null);
   const lineRef = useRef<THREE.Line>(null);
-  const radius = 3.6;
+  const radius = 4.2;
 
   useFrame(() => {
     const m = marker.current;
@@ -126,7 +93,7 @@ function OrbitTrack({
       // J2-perturbed orbit coordinates
       const t = metRef.current;
       const pos = getPositionAtTime(t);
-      m.position.set(pos[0], pos[1], pos[2]);
+      m.position.set(pos[0] * 1.1, pos[1] * 1.1, pos[2] * 1.1);
 
       if (l) {
         const points: THREE.Vector3[] = [];
@@ -135,7 +102,7 @@ function OrbitTrack({
         for (let i = 0; i <= steps; i++) {
           const checkT = t - period + (i * period) / steps;
           const p = getPositionAtTime(checkT);
-          points.push(new THREE.Vector3(p[0], p[1], p[2]));
+          points.push(new THREE.Vector3(p[0] * 1.1, p[1] * 1.1, p[2] * 1.1));
         }
         l.geometry.setFromPoints(points);
       }
@@ -160,17 +127,17 @@ function OrbitTrack({
       {/* Dynamic trajectory line */}
       <line ref={lineRef}>
         <bufferGeometry />
-        <lineBasicMaterial color="#1F6F78" transparent opacity={0.55} />
+        <lineBasicMaterial color="#38bdf8" transparent opacity={0.6} />
       </line>
       {/* Active satellite position indicator */}
       <mesh ref={marker}>
-        <sphereGeometry args={[0.11, 16, 16]} />
-        <meshBasicMaterial color="#D9A441" />
+        <sphereGeometry args={[0.13, 16, 16]} />
+        <meshBasicMaterial color="#ffb703" />
       </mesh>
       {/* Central Earth wireframe reference */}
       <mesh>
-        <sphereGeometry args={[1.5, 32, 32]} />
-        <meshStandardMaterial color="#20323A" metalness={0.1} roughness={0.9} wireframe />
+        <sphereGeometry args={[1.8, 36, 36]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.2} roughness={0.8} wireframe />
       </mesh>
     </group>
   );
@@ -194,13 +161,14 @@ export default function AttitudeScene({
   cpuTemp?: number;
 }) {
   return (
-    <Canvas camera={{ position: [5.5, 3.2, 6.5], fov: 42 }} dpr={[1, 1.75]}>
-      <color attach="background" args={["#14171A"]} />
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[6, 5, 4]} intensity={2.1} color="#FFF4E0" />
-      <directionalLight position={[-5, -2, -4]} intensity={0.35} color="#1F6F78" />
+    <Canvas camera={{ position: [5.8, 3.4, 7.2], fov: 42 }} dpr={[1, 2]}>
+      <color attach="background" args={["#020617"]} />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[7, 6, 5]} intensity={2.4} color="#fff4e0" />
+      <directionalLight position={[-6, -3, -5]} intensity={0.6} color="#0284c7" />
+      <pointLight position={[0, 4, -4]} intensity={0.8} color="#38bdf8" />
       <Suspense fallback={null}>
-        <Stars radius={90} depth={45} count={2600} factor={3.2} saturation={0} fade speed={0.4} />
+        <Stars radius={90} depth={45} count={4000} factor={3.5} saturation={0} fade speed={0.5} />
       </Suspense>
       <Spacecraft
         attitude={attitude}
@@ -210,7 +178,7 @@ export default function AttitudeScene({
         cpuTemp={cpuTemp}
       />
       <OrbitTrack angleRef={orbitAngle} metRef={metRef} />
-      <OrbitControls enablePan={false} minDistance={5} maxDistance={16} autoRotate autoRotateSpeed={0.25} />
+      <OrbitControls enablePan={false} minDistance={4.5} maxDistance={18} autoRotate autoRotateSpeed={0.25} />
     </Canvas>
   );
 }

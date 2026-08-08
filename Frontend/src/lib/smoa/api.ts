@@ -11,9 +11,18 @@ import type { AnomalyEvent, PendingCommand } from "./types";
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function getApiUrl(path: string): string {
+  if (path.startsWith("http")) return path;
+  const host = window.location.hostname || "localhost";
+  const baseUrl = window.location.port && window.location.port !== "8000"
+    ? `http://${host}:8000`
+    : "";
+  return `${baseUrl}${path}`;
+}
+
 async function getJson<T>(url: string, fallback: () => T): Promise<T> {
   try {
-    const res = await fetch(url, { headers: { accept: "application/json" } });
+    const res = await fetch(getApiUrl(url), { headers: { accept: "application/json" } });
     if (!res.ok) throw new Error(String(res.status));
     return (await res.json()) as T;
   } catch {
@@ -36,7 +45,7 @@ export async function authorizeCommand(
   operatorNote?: string,
 ): Promise<{ id: string; state: "approved" | "rejected" }> {
   try {
-    const res = await fetch(`/api/commands/${id}/authorize`, {
+    const res = await fetch(getApiUrl(`/api/commands/${id}/authorize`), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ decision, operatorNote }),
@@ -48,6 +57,7 @@ export async function authorizeCommand(
     return { id, state: decision === "approve" ? "approved" : "rejected" };
   }
 }
+
 
 export function formatMet(met: number | null | undefined) {
   if (met === null || met === undefined || isNaN(met)) return "000:00:00:00";
