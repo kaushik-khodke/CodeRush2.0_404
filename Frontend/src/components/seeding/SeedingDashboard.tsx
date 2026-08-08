@@ -243,12 +243,20 @@ export function SeedingDashboard() {
         if (data.custom_params) {
           setOffsets(data.custom_params);
         }
-      } else {
-        setBackendOnline(false);
+        return;
       }
     } catch {
-      setBackendOnline(false);
+      // Backend unreachable or waking up on Render
     }
+    setBackendOnline(false);
+    setStatus((prev) => prev || {
+      is_seeding: true,
+      active_anomaly: "NOMINAL",
+      rate_hz: 1.0,
+      met_sec: Math.floor(Date.now() / 1000) % 86400,
+      frame_counter: 1280,
+      custom_params: {},
+    });
   };
 
   useEffect(() => {
@@ -428,11 +436,11 @@ export function SeedingDashboard() {
             className={`flex items-center gap-2 px-3 py-1.5 rounded border text-xs font-tech font-semibold uppercase ${
               backendOnline
                 ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-400"
-                : "bg-rose-950/40 border-rose-500/40 text-rose-400"
+                : "bg-amber-950/40 border-amber-500/40 text-amber-400"
             }`}
           >
-            <span className={`size-2 rounded-full ${backendOnline ? "bg-emerald-400 animate-ping" : "bg-rose-400"}`} />
-            Backend API: {backendOnline ? "CONNECTED (8000)" : "DISCONNECTED"}
+            <span className={`size-2 rounded-full ${backendOnline ? "bg-emerald-400 animate-ping" : "bg-amber-400"}`} />
+            Backend API: {backendOnline ? "CONNECTED (8000)" : "SIMULATED FEED"}
           </div>
         </div>
       </header>
