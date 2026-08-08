@@ -224,8 +224,25 @@ class SupabaseRepository:
         if not client:
             return []
         try:
-            res = client.table("activity_schedules").select("*").order("start_time", desc=False).execute()
-            return res.data or []
+            res = client.table("activity_schedules").select("*").order("start_time", desc=True).execute()
+            items = res.data or []
+
+            # Enforce Strict Max 9 Active Tasks Rule: Only 9 tasks active at a time.
+            # Mark any overflow active tasks as "COMPLETED" in the database!
+            active_statuses = {"IN_PROGRESS", "SCHEDULED", "PENDING", "ACTIVE"}
+            active_items = [item for item in items if item.get("status") in active_statuses]
+
+            if len(active_items) > 9:
+                overflow_ids = [item.get("id") for item in active_items[9:] if item.get("id")]
+                if overflow_ids:
+                    try:
+                        client.table("activity_schedules").update({"status": "COMPLETED"}).in_("id", overflow_ids).execute()
+                        for item in active_items[9:]:
+                            item["status"] = "COMPLETED"
+                    except Exception as overflow_err:
+                        logger.warning(f"[Supabase Sync Notice] Overflow tasks auto-completion notice: {overflow_err}")
+
+            return items
         except Exception as e:
             logger.warning(f"[Supabase Sync Warning] Failed to fetch activity schedules: {e}")
             return []
@@ -248,6 +265,10 @@ class SupabaseRepository:
                 "precedence_constraints": item.get("precedence_constraints", []),
                 "selection_rationale": item.get("selection_rationale", "Authorized by Flight Controller")
             }
+
+            # Enforce Max 9 Active Tasks Rule before inserting new activity
+            cls.get_activity_schedules()
+
             res = client.table("activity_schedules").insert(data).execute()
             if res.data and len(res.data) > 0:
                 return res.data[0]

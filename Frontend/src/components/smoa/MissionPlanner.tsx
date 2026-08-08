@@ -72,23 +72,34 @@ export function MissionPlanner() {
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (Array.isArray(data)) {
-            const mapped: ActivityScheduleItem[] = data.map((d: any) => ({
-              id: d.id || `ACT-${Math.floor(100 + Math.random() * 900)}`,
-              activityName: d.activityName || d.activity_name || "Custom Activity",
-              activityType: d.activityType || d.activity_type || "OBSERVATION",
-              status: d.status || "SCHEDULED",
-              priority: d.priority || 1,
-              startTime: d.startTime || (d.start_time ? `T+${d.start_time.slice(11, 19)}` : "T+00:02:00"),
-              endTime: d.endTime || (d.end_time ? `T+${d.end_time.slice(11, 19)}` : "T+00:22:00"),
-              durationMinutes: d.durationMinutes || d.duration_minutes || 20,
-              resourceRequirements: {
-                powerWatts: d.resourceRequirements?.powerWatts || d.resource_requirements?.powerWatts || 140,
-                batterySocMin: d.resourceRequirements?.batterySocMin || d.resource_requirements?.batterySocMin || 40,
-                storageGb: d.resourceRequirements?.storageGb || d.resource_requirements?.storageGb || 4.0,
-              },
-              precedenceConstraints: d.precedenceConstraints || d.precedence_constraints || ["Battery_SOC >= 40%"],
-              selectionRationale: d.selectionRationale || d.selection_rationale || "AI Solver precedence check passed.",
-            }));
+            let activeCount = 0;
+            const mapped: ActivityScheduleItem[] = data.map((d: any) => {
+              const rawStatus = d.status || "SCHEDULED";
+              let finalStatus = rawStatus;
+              if (rawStatus === "IN_PROGRESS" || rawStatus === "SCHEDULED" || rawStatus === "FEASIBLE" || rawStatus === "ACTIVE") {
+                activeCount++;
+                if (activeCount > 9) {
+                  finalStatus = "COMPLETED";
+                }
+              }
+              return {
+                id: d.id || `ACT-${Math.floor(100 + Math.random() * 900)}`,
+                activityName: d.activityName || d.activity_name || "Custom Activity",
+                activityType: d.activityType || d.activity_type || "OBSERVATION",
+                status: finalStatus,
+                priority: d.priority || 1,
+                startTime: d.startTime || (d.start_time ? `T+${d.start_time.slice(11, 19)}` : "T+00:02:00"),
+                endTime: d.endTime || (d.end_time ? `T+${d.end_time.slice(11, 19)}` : "T+00:22:00"),
+                durationMinutes: d.durationMinutes || d.duration_minutes || 20,
+                resourceRequirements: {
+                  powerWatts: d.resourceRequirements?.powerWatts || d.resource_requirements?.powerWatts || 140,
+                  batterySocMin: d.resourceRequirements?.batterySocMin || d.resource_requirements?.batterySocMin || 40,
+                  storageGb: d.resourceRequirements?.storageGb || d.resource_requirements?.storageGb || 4.0,
+                },
+                precedenceConstraints: d.precedenceConstraints || d.precedence_constraints || ["Battery_SOC >= 40%"],
+                selectionRationale: d.selectionRationale || d.selection_rationale || "AI Solver precedence check passed.",
+              };
+            });
             setSchedules(mapped);
           }
         })
