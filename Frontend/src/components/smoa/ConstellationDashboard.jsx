@@ -275,9 +275,20 @@ export default function ConstellationDashboard({ latest, history = [], status, e
   // Selected satellite state (for detailed telemetry roster inspect)
   const [selectedSatId, setSelectedSatId] = useState("GSAT-201");
   const [rosterFilter, setRosterFilter] = useState("ALL");
+  const [showAnomalyModal, setShowAnomalyModal] = useState(false);
 
   // Anomalies dictionary state (satellite ID -> true if voltage drop injected)
   const [anomalies, setAnomalies] = useState({});
+
+  const handleToggleAnomaly = (id) => {
+    setAnomalies((prev) => {
+      const nextState = !prev[id];
+      if (nextState) {
+        setShowAnomalyModal(true);
+      }
+      return { ...prev, [id]: nextState };
+    });
+  };
 
   // 1. Establish Sun Vector
   const sunDirection = useMemo(() => {
@@ -602,7 +613,12 @@ export default function ConstellationDashboard({ latest, history = [], status, e
               return (
                 <div
                   key={sat.id}
-                  onClick={() => setSelectedSatId(sat.id)}
+                  onClick={() => {
+                    setSelectedSatId(sat.id);
+                    if (sat.isAnomalyActive) {
+                      setShowAnomalyModal(true);
+                    }
+                  }}
                   className={`relative flex flex-col p-2 rounded-sm cursor-pointer transition-all border ${
                     isSelected
                       ? "bg-primary/5 border-[#ffb703]/50 shadow-sm shadow-[#ffb703]/5"
@@ -736,19 +752,32 @@ export default function ConstellationDashboard({ latest, history = [], status, e
           {selectedSatObj && (
             <div className="flex flex-col gap-1 border-r border-border/10 pr-6 h-full justify-center w-[30%] shrink-0">
               <div className="flex justify-between items-center w-full">
-                <span className="font-tech text-[0.58rem] text-[#ffb703] uppercase tracking-wider font-bold">
+                <span className="font-tech text-[0.58rem] text-[#ffb703] uppercase tracking-wider font-bold flex items-center gap-1.5">
                   Node Status: {selectedSatObj.id}
+                  {selectedSatObj.isAnomalyActive && (
+                    <span className="text-critical animate-pulse font-extrabold text-[0.52rem]">⚠️ ANOMALY</span>
+                  )}
                 </span>
-                <button
-                  onClick={() => handleToggleAnomaly(selectedSatObj.id)}
-                  className={`font-mono text-[0.52rem] font-bold uppercase px-1.5 py-0.5 border rounded-xs transition-colors shrink-0 ${
-                    selectedSatObj.isAnomalyActive
-                      ? "bg-critical/15 border-critical text-critical hover:bg-critical/25"
-                      : "bg-warning/10 border-warning/40 text-warning hover:bg-warning/20"
-                  }`}
-                >
-                  {selectedSatObj.isAnomalyActive ? "Resolve Anomaly" : "Inject Volt Drop"}
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {selectedSatObj.isAnomalyActive && (
+                    <button
+                      onClick={() => setShowAnomalyModal(true)}
+                      className="font-mono text-[0.52rem] font-bold uppercase px-1.5 py-0.5 border border-critical bg-critical/20 text-critical hover:bg-critical/30 rounded-xs transition-colors shrink-0 animate-pulse"
+                    >
+                      Inspect Anomaly & SOP
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleToggleAnomaly(selectedSatObj.id)}
+                    className={`font-mono text-[0.52rem] font-bold uppercase px-1.5 py-0.5 border rounded-xs transition-colors shrink-0 ${
+                      selectedSatObj.isAnomalyActive
+                        ? "bg-critical/15 border-critical text-critical hover:bg-critical/25"
+                        : "bg-warning/10 border-warning/40 text-warning hover:bg-warning/20"
+                    }`}
+                  >
+                    {selectedSatObj.isAnomalyActive ? "Resolve Anomaly" : "Inject Volt Drop"}
+                  </button>
+                </div>
               </div>
 
               {/* Subsystems */}
@@ -844,21 +873,179 @@ export default function ConstellationDashboard({ latest, history = [], status, e
         </div>
 
         {/* Dynamic global status & recovery banner */}
-        <div className={`mt-2 rounded-sm border py-0.5 font-mono text-[0.58rem] font-bold tracking-[0.04em] text-center uppercase ${
-          selectedSatObj?.isAnomalyActive
-            ? "text-critical border-critical/40 bg-critical/15 animate-pulse"
-            : selectedSatObj && selectedSatObj.soc < 95
-              ? "text-warning border-warning/40 bg-warning/10"
-              : "text-nominal border-nominal/20 bg-nominal/5"
-        }`}>
+        <div
+          onClick={() => {
+            if (selectedSatObj?.isAnomalyActive) setShowAnomalyModal(true);
+          }}
+          className={`mt-2 rounded-sm border py-0.5 font-mono text-[0.58rem] font-bold tracking-[0.04em] text-center uppercase cursor-pointer transition-all ${
+            selectedSatObj?.isAnomalyActive
+              ? "text-critical border-critical/40 bg-critical/15 animate-pulse hover:bg-critical/25"
+              : selectedSatObj && selectedSatObj.soc < 95
+                ? "text-warning border-warning/40 bg-warning/10"
+                : "text-nominal border-nominal/20 bg-nominal/5"
+          }`}
+        >
           {selectedSatObj?.isAnomalyActive
-            ? `CRITICAL: ANOMALY ACTIVE ON NODE ${selectedSatObj.id} — EPS BUS VOLTAGE DROOP (<21.0V)`
+            ? `⚠️ CRITICAL: ANOMALY ACTIVE ON NODE ${selectedSatObj.id} — EPS BUS VOLTAGE DROOP (<21.0V) [CLICK TO INSPECT ANOMALY & SOP]`
             : selectedSatObj && selectedSatObj.soc < 95
               ? `RECOVERY PHASE: ANOMALY RESOLVED — BATTERY RECHARGING (${Math.round(selectedSatObj.soc)}%)`
               : "CONSTELLATION OPERATIONAL — ALL PAYLOAD DATA LINKS SECURED"}
         </div>
 
       </div>
+
+      {/* Interactive Anomaly Diagnosis & Sensor SOP Inspection Modal */}
+      {showAnomalyModal && selectedSatObj && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl bg-[#080d16] border border-critical/50 rounded-lg shadow-2xl shadow-critical/20 p-5 overflow-hidden font-mono text-foreground">
+            
+            {/* Decorative top warning bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-critical via-warning to-critical animate-pulse" />
+
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-border/40 pb-3 mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center size-6 rounded bg-critical/20 border border-critical text-critical font-bold text-xs animate-pulse">
+                    ⚠️
+                  </span>
+                  <h3 className="font-tech text-base font-extrabold tracking-wider text-critical uppercase">
+                    CRITICAL ANOMALY ALERT: NODE {selectedSatObj.id}
+                  </h3>
+                </div>
+                <p className="text-[0.68rem] text-muted-foreground mt-0.5">
+                  ORION AI Sentinel Telemetry Diagnosis & Standard Operating Procedure (SOP) Advisory
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAnomalyModal(false)}
+                className="text-muted-foreground hover:text-foreground border border-border/40 px-2.5 py-1 rounded text-xs transition-colors cursor-pointer"
+              >
+                ✕ CLOSE
+              </button>
+            </div>
+
+            {/* KPI Badges */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="bg-critical/10 border border-critical/30 rounded p-2 text-center">
+                <span className="text-[0.55rem] text-muted-foreground uppercase block">Subsystem</span>
+                <span className="text-xs font-bold text-critical uppercase">EPS / POWER</span>
+              </div>
+              <div className="bg-critical/10 border border-critical/30 rounded p-2 text-center">
+                <span className="text-[0.55rem] text-muted-foreground uppercase block">Anomaly Score</span>
+                <span className="text-xs font-bold text-critical">0.88 (HIGH)</span>
+              </div>
+              <div className="bg-warning/10 border border-warning/30 rounded p-2 text-center">
+                <span className="text-[0.55rem] text-muted-foreground uppercase block">Fault Profile</span>
+                <span className="text-xs font-bold text-warning uppercase">VOLT DROOP</span>
+              </div>
+              <div className="bg-nominal/10 border border-nominal/30 rounded p-2 text-center">
+                <span className="text-[0.55rem] text-muted-foreground uppercase block">Orbit Node</span>
+                <span className="text-xs font-bold text-primary uppercase">PLANE A: GSAT-201</span>
+              </div>
+            </div>
+
+            {/* 1. Anomaly Diagnosis */}
+            <div className="bg-background/60 border border-critical/30 rounded p-3 mb-3 space-y-1">
+              <span className="font-tech text-xs font-bold text-critical uppercase tracking-wider block flex items-center gap-1.5">
+                🚨 Failure Mode & Anomaly Diagnosis
+              </span>
+              <p className="text-[0.72rem] text-foreground leading-relaxed">
+                Primary EPS battery bus voltage collapsed to <span className="text-critical font-bold">{selectedSatObj.busVoltage ? selectedSatObj.busVoltage.toFixed(1) + "V" : "18.93V"}</span> (&lt; 21.0V critical threshold). Indicated cell balancing FET latch-up causing high current discharge under eclipse entry.
+              </p>
+            </div>
+
+            {/* 2. Recommended SOP Protocol */}
+            <div className="bg-background/60 border border-warning/30 rounded p-3 mb-3 space-y-2">
+              <span className="font-tech text-xs font-bold text-warning uppercase tracking-wider block flex items-center gap-1.5">
+                🛠️ Recommended SOP Recovery Protocol & Actions
+              </span>
+              <ul className="text-[0.68rem] text-foreground space-y-1 pl-1">
+                <li className="flex items-center gap-1.5">
+                  <span className="text-nominal font-bold">✓ Step 1:</span> Isolate Battery Module #3 and switch EPS bus to Auxiliary Solar Array Regulator.
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-nominal font-bold">✓ Step 2:</span> Shed Non-Essential Payload Instruments (Command Payload Power Mode 0).
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-nominal font-bold">✓ Step 3:</span> Initiate Automated Battery Thermal Conditioning Loop-1.
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="text-nominal font-bold">✓ Step 4:</span> Authorize Recovery Procedure via Warden Safety Gate (SHA-256 Signature).
+                </li>
+              </ul>
+            </div>
+
+            {/* 3. Basic Sensor Envelopes & Required Parameters */}
+            <div className="space-y-1 mb-4">
+              <span className="font-tech text-xs font-bold text-foreground uppercase tracking-wider block">
+                📊 Required Sensor Telemetry Envelopes
+              </span>
+              <div className="grid grid-cols-3 gap-2 text-[0.65rem]">
+                <div className="bg-surface p-2 rounded border border-critical/40">
+                  <span className="text-muted-foreground block text-[0.52rem] uppercase">EPS Bus Voltage</span>
+                  <span className="text-critical font-bold text-sm">{selectedSatObj.busVoltage ? selectedSatObj.busVoltage.toFixed(1) + " V" : "18.9 V"}</span>
+                  <span className="text-[0.52rem] text-muted-foreground block">Safe Limit: &gt; 21.0 V</span>
+                </div>
+
+                <div className="bg-surface p-2 rounded border border-warning/40">
+                  <span className="text-muted-foreground block text-[0.52rem] uppercase">Battery State of Charge</span>
+                  <span className="text-warning font-bold text-sm">{Math.round(selectedSatObj.soc)} %</span>
+                  <span className="text-[0.52rem] text-muted-foreground block">Safe Limit: &gt; 25.0 %</span>
+                </div>
+
+                <div className="bg-surface p-2 rounded border border-warning/40">
+                  <span className="text-muted-foreground block text-[0.52rem] uppercase">Battery Temperature</span>
+                  <span className="text-warning font-bold text-sm">34.8 °C</span>
+                  <span className="text-[0.52rem] text-muted-foreground block">Safe Limit: &lt; 32.0 °C</span>
+                </div>
+
+                <div className="bg-surface p-2 rounded border border-border/40">
+                  <span className="text-muted-foreground block text-[0.52rem] uppercase">ADCS Pointing Error</span>
+                  <span className="text-nominal font-bold text-sm">0.5° R / -0.9° P</span>
+                  <span className="text-[0.52rem] text-muted-foreground block">Safe Limit: &lt; 1.2°</span>
+                </div>
+
+                <div className="bg-surface p-2 rounded border border-border/40">
+                  <span className="text-muted-foreground block text-[0.52rem] uppercase">Comms Downlink Signal</span>
+                  <span className="text-nominal font-bold text-sm">-77.0 dBm</span>
+                  <span className="text-[0.52rem] text-muted-foreground block">Safe Limit: &gt; -105.0 dBm</span>
+                </div>
+
+                <div className="bg-surface p-2 rounded border border-border/40">
+                  <span className="text-muted-foreground block text-[0.52rem] uppercase">Propellant Tank Pressure</span>
+                  <span className="text-nominal font-bold text-sm">152.0 PSI</span>
+                  <span className="text-[0.52rem] text-muted-foreground block">Safe Limit: &gt; 100.0 PSI</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between border-t border-border/40 pt-3">
+              <button
+                onClick={() => {
+                  handleToggleAnomaly(selectedSatObj.id);
+                  setShowAnomalyModal(false);
+                }}
+                className="bg-nominal/15 border border-nominal text-nominal hover:bg-nominal/25 px-3 py-1.5 rounded text-xs font-bold uppercase transition-colors cursor-pointer"
+              >
+                ✓ RESOLVE ANOMALY
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowAnomalyModal(false);
+                  window.location.href = "/";
+                }}
+                className="bg-primary/20 border border-primary text-primary hover:bg-primary/30 px-4 py-1.5 rounded text-xs font-bold uppercase transition-colors cursor-pointer"
+              >
+                🛡️ AUTHORIZE RECOVERY VIA WARDEN GATE
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
