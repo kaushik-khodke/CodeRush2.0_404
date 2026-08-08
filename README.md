@@ -25,8 +25,6 @@
 | 🌐 **Main Operations Console** | [https://code-rush2-0-404.vercel.app/](https://code-rush2-0-404.vercel.app/) | Primary spacecraft telemetry, ML sentinels, 3D attitude viewer & multi-agent consensus |
 | 🛰️ **3D Constellation Tracker** | [https://code-rush2-0-404.vercel.app/constellation](https://code-rush2-0-404.vercel.app/constellation) | Real-time orbital mechanics, ground contact passes, and satellite constellation visualization |
 | ⚡ **Data Seeding Controller** | [https://code-rush2-0-404.vercel.app/seeding](https://code-rush2-0-404.vercel.app/seeding) | Interactive fault injection and high-frequency telemetry dataset streaming controller |
-| ⚙️ **FastAPI Backend API Docs** | [https://smoa-backend.onrender.com/docs](https://smoa-backend.onrender.com/docs) | Interactive Swagger UI API documentation and REST endpoints |
-| 💓 **Health Check Endpoint** | [https://smoa-backend.onrender.com/health](https://smoa-backend.onrender.com/health) | System health & model status check endpoint |
 | 📡 **WebSocket Telemetry Stream** | `wss://smoa-backend.onrender.com/ws/telemetry` | 1 Hz high-frequency 52-parameter real-time telemetry stream |
 
 ---
