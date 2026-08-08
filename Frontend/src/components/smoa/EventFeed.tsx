@@ -81,10 +81,12 @@ export function EventFeed({
                       <span
                         className={cn(
                           "rounded-sm border px-1.5 py-px font-tech text-[0.6rem] font-semibold tracking-[0.08em] uppercase",
-                          s.chip,
+                          (e as any).autoExecuted
+                            ? "border-nominal/60 bg-nominal/20 text-nominal shadow-[0_0_8px_rgba(0,255,136,0.3)] animate-pulse"
+                            : s.chip,
                         )}
                       >
-                        {e.severity}
+                        {(e as any).autoExecuted ? "AUTONOMOUS AI" : e.severity}
                       </span>
                       <span className="label-tech">{e.subsystem}</span>
                       <span className="num ml-auto text-[0.65rem] text-muted-foreground">{timeAgo(e.ts)}</span>

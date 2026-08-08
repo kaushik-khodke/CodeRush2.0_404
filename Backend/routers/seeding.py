@@ -372,6 +372,147 @@ def create_anomaly_event_and_command(mode: str, detail_override: Optional[str] =
         }
         return event, cmd
 
+    elif mode == "reaction_wheel_desat":
+        event = {
+            "id": event_id,
+            "ts": now_ms,
+            "subsystem": "adcs",
+            "severity": "info",
+            "title": "ADCS AUTONOMOUS HEAL: Reaction Wheel 3 Angular Speed 5200 RPM",
+            "detector": "ML Sentinel · ADCS Momentum Tracker",
+            "score": 0.74,
+            "autoExecuted": True,
+            "diagnosis": {
+                "rootCause": "Reaction wheel 3 accumulated angular momentum near saturation limit (5200 RPM).",
+                "confidence": 0.99,
+                "evidence": [
+                    "Reaction wheel 3 speed reached 5200 RPM",
+                    "Stored angular momentum 1.45 Nms",
+                    "Autonomous policy matched: Zero human intervention B-field desaturation"
+                ],
+                "proposedAction": "ADCS_AUTONOMOUS_MAGNETORQUER_DESAT",
+                "model": "autonomous-policy-engine v1.0",
+                "latencyMs": 12,
+                "predictiveMetrics": {
+                    "remainingBatteryLife": "16.5 hours",
+                    "estCpuTemp30min": "38.5 °C"
+                },
+                "constraintViolations": []
+            }
+        }
+        cmd = {
+            "id": cmd_id,
+            "ts": now_ms,
+            "command": "ADCS_AUTONOMOUS_MAGNETORQUER_DESAT",
+            "subsystem": "adcs",
+            "summary": "100% Autonomous AI Action: Fired B-field magnetorquers to dump 1.2 Nms angular momentum from Reaction Wheel 3. Self-healed automatically without human intervention.",
+            "irreversible": False,
+            "linkedEventId": event_id,
+            "state": "executed",
+            "autoExecuted": True,
+            "constraint": {
+                "status": "pass",
+                "solver": "Warden Safety Gate · Autonomous Self-Healing Policy",
+                "reasoning": "Standard momentum dump verified 100% safe. Zero risk execution.",
+                "checks": [{"name": "FR-08 momentum dump", "ok": True, "detail": "Autonomous policy approved"}]
+            }
+        }
+        return event, cmd
+
+    elif mode == "ssr_buffer_flush":
+        event = {
+            "id": event_id,
+            "ts": now_ms,
+            "subsystem": "comms",
+            "severity": "info",
+            "title": "DATA AUTONOMOUS HEAL: Solid-State Recorder 92% Storage Capacity",
+            "detector": "ML Sentinel · SSR Storage Monitor",
+            "score": 0.65,
+            "autoExecuted": True,
+            "diagnosis": {
+                "rootCause": "Telemetry storage buffer overflow prevention. Recorder memory reached 44.1 GB.",
+                "confidence": 0.99,
+                "evidence": [
+                    "SSR memory usage 44.1 GB / 48 GB (92%)",
+                    "Telemetry cache uncompressed",
+                    "Autonomous policy matched: Zero human intervention compression & dump"
+                ],
+                "proposedAction": "SSR_AUTONOMOUS_COMPRESS_AND_FLUSH",
+                "model": "autonomous-policy-engine v1.0",
+                "latencyMs": 8,
+                "predictiveMetrics": {
+                    "remainingBatteryLife": "16.8 hours",
+                    "estCpuTemp30min": "37.2 °C"
+                },
+                "constraintViolations": []
+            }
+        }
+        cmd = {
+            "id": cmd_id,
+            "ts": now_ms,
+            "command": "SSR_AUTONOMOUS_COMPRESS_AND_FLUSH",
+            "subsystem": "comms",
+            "summary": "100% Autonomous AI Action: Compressed telemetry log archives and flushed temporary buffer to release 12.4 GB storage. Self-healed automatically without human intervention.",
+            "irreversible": False,
+            "linkedEventId": event_id,
+            "state": "executed",
+            "autoExecuted": True,
+            "constraint": {
+                "status": "pass",
+                "solver": "Warden Safety Gate · Autonomous Self-Healing Policy",
+                "reasoning": "SSR memory purge fits deterministic storage safety envelope.",
+                "checks": [{"name": "FR-14 storage purge", "ok": True, "detail": "Autonomous policy approved"}]
+            }
+        }
+        return event, cmd
+
+    elif mode == "payload_heater_cycle":
+        event = {
+            "id": event_id,
+            "ts": now_ms,
+            "subsystem": "thermal",
+            "severity": "info",
+            "title": "THERMAL AUTONOMOUS HEAL: Payload Camera Sensor Low Temp (-5.2°C)",
+            "detector": "ML Sentinel · Thermal Zone Monitor",
+            "score": 0.68,
+            "autoExecuted": True,
+            "diagnosis": {
+                "rootCause": "Payload optical camera thermal drop in deep orbital shadow (-5.2°C).",
+                "confidence": 0.99,
+                "evidence": [
+                    "Camera sensor temp -5.2°C (Min nominal: +5.0°C)",
+                    "Spacecraft in orbital shadow zone 2",
+                    "Autonomous policy matched: Zero human intervention operational heater cycle"
+                ],
+                "proposedAction": "THERMAL_AUTONOMOUS_ZONE_HEATER_ON",
+                "model": "autonomous-policy-engine v1.0",
+                "latencyMs": 10,
+                "predictiveMetrics": {
+                    "remainingBatteryLife": "16.2 hours",
+                    "estCpuTemp30min": "39.0 °C"
+                },
+                "constraintViolations": []
+            }
+        }
+        cmd = {
+            "id": cmd_id,
+            "ts": now_ms,
+            "command": "THERMAL_AUTONOMOUS_ZONE_HEATER_ON",
+            "subsystem": "thermal",
+            "summary": "100% Autonomous AI Action: Engaged payload zone-1 operational heater for 180s to restore camera sensor to +22.5°C. Self-healed automatically without human intervention.",
+            "irreversible": False,
+            "linkedEventId": event_id,
+            "state": "executed",
+            "autoExecuted": True,
+            "constraint": {
+                "status": "pass",
+                "solver": "Warden Safety Gate · Autonomous Self-Healing Policy",
+                "reasoning": "Heater current draw (+15W) verified within survival power budget.",
+                "checks": [{"name": "FR-09 heater power", "ok": True, "detail": "Autonomous policy approved"}]
+            }
+        }
+        return event, cmd
+
     return None, None
 
 def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc_val: float = 88.5, custom: Dict[str, float] = None) -> Dict[str, Any]:
@@ -469,6 +610,13 @@ def generate_telemetry(anomaly_mode: str = "nominal", met_val: int = 128400, soc
         packet_loss = 65.0
         wheel_rpm = 5443.0
         fuel_pressure = 25.0
+    elif anomaly_mode == "reaction_wheel_desat":
+        wheel_rpm = 5200.0 + wobble(15) * 200.0
+        angular_vel = 0.12
+    elif anomaly_mode == "ssr_buffer_flush":
+        payload_temp = 31.0
+    elif anomaly_mode == "payload_heater_cycle":
+        payload_temp = -5.2 + wobble(10) * 1.0
 
     # Dynamic ML Anomaly Score evaluation across 52 parameters
     is_custom_anomaly = False
@@ -662,11 +810,16 @@ def get_seeding_history():
 
 @router.post("/api/seeding/anomaly")
 async def set_anomaly(req: AnomalyRequest):
-    allowed_modes = ["nominal", "power_droop", "adcs_oscillation", "thermal_overheat", "comms_loss", "thruster_leak", "sensor_drift", "overfitting"]
+    allowed_modes = [
+        "nominal", "power_droop", "adcs_oscillation", "thermal_overheat",
+        "comms_loss", "thruster_leak", "sensor_drift", "overfitting",
+        "reaction_wheel_desat", "ssr_buffer_flush", "payload_heater_cycle"
+    ]
     if req.mode not in allowed_modes:
         raise HTTPException(status_code=400, detail=f"Invalid mode. Must be one of {allowed_modes}")
     
     state.anomaly_mode = req.mode
+    is_autonomous = req.mode in ["reaction_wheel_desat", "ssr_buffer_flush", "payload_heater_cycle"]
     
     if req.mode == "nominal":
         state.custom_params = {}
@@ -686,15 +839,22 @@ async def set_anomaly(req: AnomalyRequest):
         state.events.insert(0, event)
         
         if cmd:
-            # Deduplicate pending commands by command name
-            state.pending_commands = [c for c in state.pending_commands if c.get("command") != cmd.get("command")]
-            state.pending_commands.insert(0, cmd)
+            if is_autonomous:
+                cmd["state"] = "executed"
+                cmd["autoExecuted"] = True
+                event["autoExecuted"] = True
+                # Do NOT add to pending commands approval queue — AI Agent executed it 100% autonomously!
+                state.pending_commands = [c for c in state.pending_commands if c.get("command") != cmd.get("command")]
+            else:
+                # Deduplicate pending commands by command name for human approval modes
+                state.pending_commands = [c for c in state.pending_commands if c.get("command") != cmd.get("command")]
+                state.pending_commands.insert(0, cmd)
             
         try:
             from database.repositories.supabase_repository import SupabaseRepository
             SupabaseRepository.insert_anomaly({
                 "anomaly_type": event.get("title", "Telemetry Anomaly"),
-                "severity": event.get("severity", "MEDIUM").upper(),
+                "severity": "LOW" if is_autonomous else event.get("severity", "MEDIUM").upper(),
                 "description": event.get("diagnosis", {}).get("rootCause", "Simulated Anomaly"),
                 "competing_hypotheses": event.get("diagnosis", {}).get("evidence", []),
                 "recommended_procedure": event.get("diagnosis", {}).get("proposedAction", "Review SOP")
@@ -703,7 +863,7 @@ async def set_anomaly(req: AnomalyRequest):
                 SupabaseRepository.insert_approval_item({
                     "recommended_action": cmd.get("summary", cmd.get("command", "Execute Command")),
                     "command_preview": cmd,
-                    "status": "PENDING"
+                    "status": "APPROVED" if is_autonomous else "PENDING"
                 })
         except Exception:
             pass
@@ -718,7 +878,7 @@ async def set_anomaly(req: AnomalyRequest):
                     "Battery_Voltage": 27.6,
                     "Battery_SOC": 78.4,
                     "CPU_Temperature": 42.0,
-                    "Reaction_Wheel_Speed": 2800,
+                    "Reaction_Wheel_Speed": 5200 if req.mode == "reaction_wheel_desat" else 2800,
                     "Signal_Strength": -85.0,
                     "Packet_Loss": 0.1,
                     "Fuel_Level": 85.0,
@@ -743,13 +903,40 @@ async def set_anomaly(req: AnomalyRequest):
                 trace_name=f"SMOA 9-Agent Diagnosis — {req.mode.upper()}",
                 agent_name="Flight Director Chair (llama-3.3-70b-versatile)",
                 prompt=f"[ML SENTINEL ANOMALY DETECTED] Mode: {req.mode}, Subsystem: {event.get('subsystem')}",
-                output=f"Agreed Root Cause: {diag_out.get('root_cause', event.get('diagnosis', {}).get('rootCause'))}. Recommended SOP: {fd_out.get('recommended_procedure', 'SOP Recovery')}",
-                metadata={"severity": event.get("severity"), "score": event.get("score"), "session_id": state.session_id}
+                output=f"Agreed Root Cause: {diag_out.get('root_cause', event.get('diagnosis', {}).get('rootCause'))}. Recommended SOP: {fd_out.get('recommended_procedure', 'SOP Recovery')}. Auto-Executed: {is_autonomous}",
+                metadata={"severity": event.get("severity"), "score": event.get("score"), "session_id": state.session_id, "auto_executed": is_autonomous}
             )
             flush_langfuse()
-            print(f"[Agentic AI System] Executed 9-Agent Workflow & Flushed Traces to us.cloud.langfuse.com!")
+            print(f"[Agentic AI System] Executed 9-Agent Workflow & Flushed Traces to us.cloud.langfuse.com! (Autonomous: {is_autonomous})")
         except Exception as agent_err:
             print(f"[Agentic AI System Notice]: {agent_err}")
+
+        # If autonomous mode, automatically self-heal satellite back to nominal baseline after 2.0s delay
+        if is_autonomous:
+            async def auto_restore_task():
+                await asyncio.sleep(2.0)
+                state.anomaly_mode = "nominal"
+                await ws_manager.broadcast({
+                    "type": "ANOMALY_EVENT",
+                    "event": {
+                        "id": f"EVT-RESTORE-{int(time.time()*1000)}",
+                        "ts": int(time.time() * 1000),
+                        "subsystem": event.get("subsystem", "all"),
+                        "severity": "info",
+                        "title": f"AUTOMATED AI SELF-HEALED: {event.get('subsystem', 'Subsystem').upper()} Restored to Nominal Baseline",
+                        "detector": "Agentic AI Self-Healing Engine",
+                        "score": 0.08,
+                        "autoExecuted": True,
+                        "diagnosis": {
+                            "rootCause": "Agentic AI executed autonomous recovery action without human intervention.",
+                            "confidence": 1.0,
+                            "evidence": ["Recovery command completed", "Telemetry restored to 3σ nominal envelope"],
+                            "proposedAction": "NONE - NOMINAL STATE RESTORED"
+                        }
+                    },
+                    "command": None
+                })
+            asyncio.create_task(auto_restore_task())
 
         await ws_manager.broadcast({
             "type": "ANOMALY_EVENT",
